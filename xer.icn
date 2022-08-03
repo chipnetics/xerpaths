@@ -19,8 +19,6 @@ procedure main(arglist)
 
     index := 1
     every xer_line := !xer_data do {
-         index +:= 1
-
         if xer_line == "%T\tTASKPRED" then {
             every i:=index+1 to *xer_data do {
                 if find("%T",xer_data[i])==1 then break
@@ -29,13 +27,14 @@ procedure main(arglist)
             }
         }
         else if xer_line == "%T\tTASK" then {
-            # TODO! Weird issue if use index +:= 1 here instead of in every.
-            every i:=index+1 to *xer_data do {
+            index +:= 1
+            every i:=index to *xer_data do {
                 if find("%T",xer_data[i])==1 then break
                 fields := fieldlist(xer_data[i],"\t")
                 insert(tbl_tasks,fields[2],task(fields[2],fields[15],fields[16]))
              }
         }
+        index +:= 1
     }
 
    every path_comp := gen_path(arglist[2]) do {
