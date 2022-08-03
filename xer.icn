@@ -1,0 +1,81 @@
+link ximage
+link fullimag
+link strings
+
+record relation(rel_type,start_id,end_id)
+record task(task_id,task_code,task_name)
+
+global arr_relations,tbl_tasks
+
+# Run with ./foo bar.xer start_id
+# Example ./foo baytown.xer 94099
+procedure main(arglist)
+
+    xer_file := open(arglist[1],"r") | stop("Cannot open XER file.")
+    every put(xer_data := [],!xer_file)
+
+    arr_relations := []
+    tbl_tasks := table(0)
+
+    index := 1
+    every xer_line := !xer_data do {
+         index +:= 1
+
+        if xer_line == "%T\tTASKPRED" then {
+            every i:=index+1 to *xer_data do {
+                if find("%T",xer_data[i])==1 then break
+                fields := fieldlist(xer_data[i],"\t")
+                put(arr_relations,relation(fields[7],fields[3],fields[4]))
+            }
+        }
+        else if xer_line == "%T\tTASK" then {
+            # TODO! Weird issue if use index +:= 1 here instead of in every.
+            every i:=index+1 to *xer_data do {
+                if find("%T",xer_data[i])==1 then break
+                fields := fieldlist(xer_data[i],"\t")
+                insert(tbl_tasks,fields[2],task(fields[2],fields[15],fields[16]))
+             }
+        }
+    }
+
+   every path_comp := gen_path(arglist[2]) do {
+        write(fullimage(path_comp))
+        print_tasks(path_comp)
+   }
+        
+end
+
+procedure print_tasks(taskid_list)
+    every task := !taskid_list do write("\t",tbl_tasks[task].task_code,"\t",tbl_tasks[task].task_name)
+end
+
+# Generates complete paths starting from 'from'
+procedure gen_path(from)
+    static path := []
+    initial {
+        put(path,from)
+    }
+    repeat {
+        every dest:=destination(from) do {
+            put(path,dest)
+            gen_path(dest)
+
+            suspend path
+            path := []
+            put(path,from)
+        }
+        fail
+    }
+end
+
+# Generates possible destinations from 'from'
+procedure destination(from)
+    repeat {
+        every i:=1 to *arr_relations do {
+            if arr_relations[i].start_id == from then {
+                suspend arr_relations[i].end_id
+            }
+        }
+        fail
+    }
+end
