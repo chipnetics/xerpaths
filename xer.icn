@@ -20,15 +20,14 @@ procedure main(arglist)
     index := 1
     every xer_line := !xer_data do {
         if xer_line == "%T\tTASKPRED" then {
-            every i:=index+1 to *xer_data do {
+            every i:=index+2 to *xer_data do {
                 if find("%T",xer_data[i])==1 then break
                 fields := fieldlist(xer_data[i],"\t")
                 put(arr_relations,relation(fields[7],fields[3],fields[4]))
             }
         }
         else if xer_line == "%T\tTASK" then {
-            index +:= 1
-            every i:=index to *xer_data do {
+            every i:=index+2 to *xer_data do {
                 if find("%T",xer_data[i])==1 then break
                 fields := fieldlist(xer_data[i],"\t")
                 insert(tbl_tasks,fields[2],task(fields[2],fields[15],fields[16]))
@@ -36,7 +35,7 @@ procedure main(arglist)
         }
         index +:= 1
     }
-
+    
    every path_comp := gen_path(arglist[2]) do {
         write(fullimage(path_comp))
         print_tasks(path_comp)
