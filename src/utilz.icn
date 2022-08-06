@@ -1,0 +1,10 @@
+
+link dialog
+link file_dlg
+
+procedure getfilename()
+    f := FileDialog()
+    f.show_modal()
+    return f
+end
+

@@ -1,0 +1,230 @@
+link dialog
+link file_dlg
+link fullimag
+link regexp
+
+import gui
+$include "guih.icn"
+$include "utilz.icn"
+$include "parse.icn"
+
+class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, table_xer, text_field_activity_name, text_field_task_id, table_2, table_xer_results, text_button_export, table_column_1, table_column_2, label_loaded_file)
+   method component_setup()
+      self.setup()
+   end
+
+   method end_dialog()
+   end
+
+   method init_dialog()
+   end
+
+   method on_button_open_xer(ev)
+      a_file := getfilename()
+      if *a_file.file.contents==0 then return
+      load_structures(a_file.file.contents)
+      table_contents := []
+      every keyval := key(tbl_tasks) do put(table_contents,[tbl_tasks[keyval].task_code,tbl_tasks[keyval].task_name])
+      table_xer.set_contents(table_contents)
+      label_loaded_file.set_label("Loaded: "||a_file.file.contents)
+   end
+
+   method on_table_xer(ev)
+   end
+
+   method on_text_field_activity_name(ev)
+      re_content := text_field_activity_name.get_contents()
+      filtered_results := []
+      every keyval := key(tbl_tasks) do {
+         if tbl_tasks[keyval].task_name ? ReFind(re_content) then 
+             put(filtered_results,[tbl_tasks[keyval].task_code,tbl_tasks[keyval].task_name])
+      }
+      table_xer.set_contents(filtered_results)
+   end
+
+   method on_text_field_task_id(ev)
+      re_content := text_field_task_id.get_contents()
+      filtered_results := []
+      every keyval := key(tbl_tasks) do {
+         if tbl_tasks[keyval].task_code ? ReFind(re_content) then 
+             put(filtered_results,[tbl_tasks[keyval].task_code,tbl_tasks[keyval].task_name])
+      }
+      table_xer.set_contents(filtered_results)
+   end
+
+   method on_text_button_export(ev)
+   end
+
+   method setup()
+      self.set_attribs("size=814,532", "bg=light gray", "label=XER Paths")
+      button_open_xer := TextButton()
+      button_open_xer.set_pos("10", "10")
+      button_open_xer.connect(self, "on_button_open_xer", MOUSE_RELEASE_EVENT)
+      button_open_xer.clear_toggles()
+      button_open_xer.set_label("Choose XER")
+      button_open_xer.set_internal_alignment("c")
+      self.add(button_open_xer)
+      text_field_task_id := TextField()
+      text_field_task_id.set_pos("60", "47")
+      text_field_task_id.set_size("130", )
+      text_field_task_id.set_draw_border()
+      text_field_task_id.connect(self, "on_text_field_task_id", CONTENT_CHANGED_EVENT)
+      text_field_task_id.set_contents("")
+      self.add(text_field_task_id)
+      label_task_id := Label()
+      label_task_id.set_pos("10", 54)
+      label_task_id.set_internal_alignment("l")
+      label_task_id.set_label("Task ID")
+      self.add(label_task_id)
+      label_activity_name := Label()
+      label_activity_name.set_pos("203", "53")
+      label_activity_name.set_internal_alignment("l")
+      label_activity_name.set_label("Activity Name")
+      self.add(label_activity_name)
+      text_field_activity_name := TextField()
+      text_field_activity_name.set_pos(287, 47)
+      text_field_activity_name.set_size(213, 22)
+      text_field_activity_name.set_draw_border()
+      text_field_activity_name.connect(self, "on_text_field_activity_name", CONTENT_CHANGED_EVENT)
+      text_field_activity_name.set_contents("")
+      self.add(text_field_activity_name)
+      table_xer := Table()
+      table_xer.set_pos("10", "84")
+      table_xer.set_size("789", "274")
+      table_xer.connect(self, "on_table_xer", SELECTION_UP_EVENT)
+      table_xer.set_select_one()
+      table_xer.set_contents([])
+      table_column_1 := TableColumn()
+      table_column_1.set_label("Task ID")
+      table_column_1.set_internal_alignment("l")
+      table_column_1.set_column_width(150)
+      table_xer.add_column(table_column_1)
+      table_column_2 := TableColumn()
+      table_column_2.set_label("Task Name")
+      table_column_2.set_internal_alignment("l")
+      table_column_2.set_column_width(600)
+      table_xer.add_column(table_column_2)
+      self.add(table_xer)
+      table_xer_results := Table()
+      table_xer_results.set_pos("10", 401)
+      table_xer_results.set_size(789, 121)
+      table_xer_results.set_contents([])
+      self.add(table_xer_results)
+      text_button_export := TextButton()
+      text_button_export.set_pos("10", 371)
+      text_button_export.connect(self, "on_text_button_export", BUTTON_RELEASE_EVENT)
+      text_button_export.clear_toggles()
+      text_button_export.set_label("Export")
+      text_button_export.set_internal_alignment("c")
+      self.add(text_button_export)
+      label_loaded_file := Label()
+      label_loaded_file.set_pos("96", "20")
+      label_loaded_file.set_size("365", )
+      label_loaded_file.set_internal_alignment("l")
+      label_loaded_file.set_label("")
+      self.add(label_loaded_file)
+   end
+
+   initially
+      self.Dialog.initially()
+end
+
+procedure main()
+   local d
+   ReCaseIndependent()
+   d := XERPath()
+   d.show_modal()
+end
+
+### Ivib-v2 layout ##
+#class|Canvas|17|Name Table|table|integer|0|5|string|label|integer|3|st
+#ring|table|integer|2|string|table_column|integer|2|string|text_button|
+#integer|3|string|text_field|integer|2|SuperClass Name|string|Dialog|Im
+#port Name|string|gui|Button Groups|class|ButtonGroupSet|2|Parent Canva
+#s|1|Boxes|list|0|Checkbox Groups|class|CheckBoxGroupSet|2|Parent Canva
+#s|1|Boxes|list|0|Gen Indent|integer|3|Gen Main|null|Gen Component Setu
+#p|integer|1|Gen Init Dialog|integer|1|Gen Initially|integer|1|Dialog S
+#truct|class|CDialog|4|Min Width|null|Min Height|null|Ticker Rate|null|
+#Attribs|list|2|string|bg=light gray|string|label=XER Paths|Name|string
+#|XERPath|Width|integer|814|Height|integer|532|Items|list|9|class|Canva
+#sTextButton|36|Parent Canvas|1|Name|string|button_open_xer|Class Name|
+#string|TextButton|Import Name|string|gui|X Fix|null|Y Fix|null|W Fix|n
+#ull|H Fix|null|W Default|integer|1|H Default|integer|1|X Spec|string|1
+#0|Y Spec|string|10|W Spec|integer|76|H Spec|integer|23|X Align|string|
+#l|Y Align|string|t|Is shaded|null|Is Button Subclass|integer|1|Draw Bo
+#rder|null|Attribs|list|0|Tooltip|null|Accel|null|Event Handlers|list|1
+#|list|2|string|MOUSE_RELEASE_EVENT|string|on_button_open_xer|Class Var
+#iable|integer|1|Parent Component|1|Label|string|Choose XER|No Keyboard
+#|null|Img Up|null|Img Down|null|Img Width|null|Img Height|null|Is Chec
+#ked Flag|null|Is Checkbox Flag|null|Parent CheckBoxGroup|null|Parent B
+#utton Group|null|Internal Align|string|c|class|CanvasTextField|27|Pare
+#nt Canvas|1|Name|string|text_field_task_id|Class Name|string|TextField
+#|Import Name|string|gui|X Fix|null|Y Fix|null|W Fix|null|H Fix|null|W 
+#Default|null|H Default|integer|1|X Spec|string|60|Y Spec|string|47|W S
+#pec|string|130|H Spec|integer|23|X Align|string|l|Y Align|string|t|Is 
+#shaded|null|Is Button Subclass|null|Draw Border|integer|1|Attribs|list
+#|0|Tooltip|null|Accel|null|Event Handlers|list|1|list|2|string|CONTENT
+#_CHANGED_EVENT|string|on_text_field_task_id|Class Variable|integer|1|P
+#arent Component|1|Contents|string||Filter String|string||class|CanvasL
+#abel|27|Parent Canvas|1|Name|string|label_task_id|Class Name|string|La
+#bel|Import Name|string|gui|X Fix|null|Y Fix|null|W Fix|null|H Fix|null
+#|W Default|integer|1|H Default|integer|1|X Spec|string|10|Y Spec|integ
+#er|54|W Spec|integer|42|H Spec|integer|13|X Align|string|l|Y Align|str
+#ing|t|Is shaded|null|Is Button Subclass|null|Draw Border|null|Attribs|
+#list|0|Tooltip|null|Accel|null|Event Handlers|list|0|Class Variable|in
+#teger|1|Parent Component|1|Label|string|Task ID|Internal Align|string|
+#l|class|CanvasLabel|27|Parent Canvas|1|Name|string|label_activity_name
+#|Class Name|string|Label|Import Name|string|gui|X Fix|null|Y Fix|null|
+#W Fix|null|H Fix|null|W Default|integer|1|H Default|integer|1|X Spec|s
+#tring|203|Y Spec|string|53|W Spec|integer|78|H Spec|integer|13|X Align
+#|string|l|Y Align|string|t|Is shaded|null|Is Button Subclass|null|Draw
+# Border|null|Attribs|list|0|Tooltip|null|Accel|null|Event Handlers|lis
+#t|0|Class Variable|integer|1|Parent Component|1|Label|string|Activity 
+#Name|Internal Align|string|l|class|CanvasTextField|27|Parent Canvas|1|
+#Name|string|text_field_activity_name|Class Name|string|TextField|Impor
+#t Name|string|gui|X Fix|null|Y Fix|null|W Fix|null|H Fix|null|W Defaul
+#t|null|H Default|null|X Spec|integer|287|Y Spec|integer|47|W Spec|inte
+#ger|213|H Spec|integer|22|X Align|string|l|Y Align|string|t|Is shaded|
+#null|Is Button Subclass|null|Draw Border|integer|1|Attribs|list|0|Tool
+#tip|null|Accel|null|Event Handlers|list|1|list|2|string|CONTENT_CHANGE
+#D_EVENT|string|on_text_field_activity_name|Class Variable|integer|1|Pa
+#rent Component|1|Contents|string||Filter String|string||class|CanvasTa
+#ble|28|Parent Canvas|1|Name|string|table_xer|Class Name|string|Table|I
+#mport Name|string|gui|X Fix|null|Y Fix|null|W Fix|null|H Fix|null|W De
+#fault|null|H Default|null|X Spec|string|10|Y Spec|string|84|W Spec|str
+#ing|789|H Spec|string|274|X Align|string|l|Y Align|string|t|Is shaded|
+#null|Is Button Subclass|null|Draw Border|null|Attribs|list|0|Tooltip|n
+#ull|Accel|null|Event Handlers|list|1|list|2|string|SELECTION_UP_EVENT|
+#string|on_table_xer|Class Variable|integer|1|Parent Component|1|Select
+# One|integer|1|Select Many|null|Columns|list|2|class|CanvasTableColumn
+#|6|Name|string|table_column_1|Class Variable|integer|1|Label|string|Ta
+#sk ID|Column Width|integer|150|Internal Alignment|string|l|Auto width 
+#flag|null|class|CanvasTableColumn|6|Name|string|table_column_2|Class V
+#ariable|integer|1|Label|string|Task Name|Column Width|integer|600|Inte
+#rnal Alignment|string|l|Auto width flag|null|class|CanvasTable|28|Pare
+#nt Canvas|1|Name|string|table_xer_results|Class Name|string|Table|Impo
+#rt Name|string|gui|X Fix|null|Y Fix|null|W Fix|null|H Fix|null|W Defau
+#lt|null|H Default|null|X Spec|string|10|Y Spec|integer|401|W Spec|inte
+#ger|789|H Spec|integer|121|X Align|string|l|Y Align|string|t|Is shaded
+#|null|Is Button Subclass|null|Draw Border|null|Attribs|list|0|Tooltip|
+#null|Accel|null|Event Handlers|list|0|Class Variable|integer|1|Parent 
+#Component|1|Select One|null|Select Many|null|Columns|list|0|class|Canv
+#asTextButton|36|Parent Canvas|1|Name|string|text_button_export|Class N
+#ame|string|TextButton|Import Name|string|gui|X Fix|null|Y Fix|null|W F
+#ix|null|H Fix|null|W Default|integer|1|H Default|integer|1|X Spec|stri
+#ng|10|Y Spec|integer|371|W Spec|integer|52|H Spec|integer|23|X Align|s
+#tring|l|Y Align|string|t|Is shaded|null|Is Button Subclass|integer|1|D
+#raw Border|null|Attribs|list|0|Tooltip|null|Accel|null|Event Handlers|
+#list|1|list|2|string|BUTTON_RELEASE_EVENT|string|on_text_button_export
+#|Class Variable|integer|1|Parent Component|1|Label|string|Export|No Ke
+#yboard|null|Img Up|null|Img Down|null|Img Width|null|Img Height|null|I
+#s Checked Flag|null|Is Checkbox Flag|null|Parent CheckBoxGroup|null|Pa
+#rent Button Group|null|Internal Align|string|c|class|CanvasLabel|27|Pa
+#rent Canvas|1|Name|string|label_loaded_file|Class Name|string|Label|Im
+#port Name|string|gui|X Fix|null|Y Fix|null|W Fix|null|H Fix|null|W Def
+#ault|null|H Default|integer|1|X Spec|string|96|Y Spec|string|20|W Spec
+#|string|365|H Spec|integer|13|X Align|string|l|Y Align|string|t|Is sha
+#ded|null|Is Button Subclass|null|Draw Border|null|Attribs|list|0|Toolt
+#ip|null|Accel|null|Event Handlers|list|0|Class Variable|integer|1|Pare
+#nt Component|1|Label|string||Internal Align|string|l|Initial Focus|nul
+#l|Event Handlers|list|0|

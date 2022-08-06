@@ -1,0 +1,41 @@
+link ximage
+link fullimag
+link strings
+
+record relation(rel_type,start_id,end_id)
+record task(task_id,task_code,task_name)
+
+global arr_relations,tbl_tasks
+
+procedure load_structures(xer_filename)
+    xer_file := open(xer_filename,"r") | stop("Cannot open XER file.")
+    every put(xer_data := [],!xer_file)
+
+    # if /arr_relations then arr_relations:= []
+    
+    # if /tbl_tasks then tbl_tasks:= table(0) else {
+    #     every x := key(tbl_tasks) do delete(tbl_tasks, x)
+    # }
+
+    arr_relations:= []
+    tbl_tasks:= table(0)
+
+    index := 1
+    every xer_line := !xer_data do {
+        if xer_line == "%T\tTASKPRED" then {
+            every i:=index+2 to *xer_data do {
+                if find("%T",xer_data[i])==1 then break
+                fields := fieldlist(xer_data[i],"\t")
+                put(arr_relations,relation(fields[7],fields[3],fields[4]))
+            }
+        }
+        else if xer_line == "%T\tTASK" then {
+            every i:=index+2 to *xer_data do {
+                if find("%T",xer_data[i])==1 then break
+                fields := fieldlist(xer_data[i],"\t")
+                insert(tbl_tasks,fields[2],task(fields[2],fields[15],fields[16]))
+             }
+        }
+        index +:= 1
+    }
+end

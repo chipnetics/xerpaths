@@ -1,3 +1,10 @@
 *.xer
 *.u
+*.dir
+*.pag
 xer
+src/*.xer
+src/*.u
+src/*.dir
+src/*.pag
+src/pathgui
