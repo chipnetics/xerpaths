@@ -1,25 +1,21 @@
 link ximage
 link fullimag
 link strings
+link tuple
 
 record relation(rel_type,start_id,end_id)
 record task(task_id,task_code,task_name)
 
-global arr_relations,tbl_tasks
+global arr_relations,tbl_tasks_code,tbl_tasks_id
 
 procedure load_structures(xer_filename)
-    xer_file := open(xer_filename,"r") | stop("Cannot open XER file.")
+    local xer_file := open(xer_filename,"r") | stop("Cannot open XER file.")
     every put(xer_data := [],!xer_file)
 
-    # if /arr_relations then arr_relations:= []
-    
-    # if /tbl_tasks then tbl_tasks:= table(0) else {
-    #     every x := key(tbl_tasks) do delete(tbl_tasks, x)
-    # }
-
     arr_relations:= []
-    tbl_tasks:= table(0)
-
+    tbl_tasks_code:= table(0)
+    tbl_tasks_id:= table(0)
+    
     index := 1
     every xer_line := !xer_data do {
         if xer_line == "%T\tTASKPRED" then {
@@ -33,9 +29,39 @@ procedure load_structures(xer_filename)
             every i:=index+2 to *xer_data do {
                 if find("%T",xer_data[i])==1 then break
                 fields := fieldlist(xer_data[i],"\t")
-                insert(tbl_tasks,fields[2],task(fields[2],fields[15],fields[16]))
+                # Check if way to use multiple keys without using two tables
+                insert(tbl_tasks_code,fields[15],task(fields[2],fields[15],fields[16]))
+                insert(tbl_tasks_id,fields[2],task(fields[2],fields[15],fields[16]))
              }
         }
         index +:= 1
+    }
+end
+
+procedure print_tasks(taskid_list)
+    every task := !taskid_list do write("\t",tbl_tasks_id[task].task_id,"\t",tbl_tasks_id[task].task_code,"\t",tbl_tasks_id[task].task_name)
+end
+
+# Generates complete paths starting from 'from'
+procedure gen_path(from)
+    static generated := []
+    every dest:=destination(from) do {
+        if *generated = 0 then put(generated,from)  # Start of new generated path.
+        put(generated,dest)
+        gen_path(dest)
+        suspend generated
+        generated := []
+     }
+end
+
+# Generates possible destinations from 'from'
+procedure destination(from)
+    repeat {
+        every i:=1 to *arr_relations do {
+            if arr_relations[i].start_id == from then {
+                suspend arr_relations[i].end_id
+            }
+        }
+        fail
     }
 end
