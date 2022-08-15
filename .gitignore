@@ -8,3 +8,5 @@ src/*.u
 src/*.dir
 src/*.pag
 src/pathgui
+src/parse
+src/utilz

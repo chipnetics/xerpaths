@@ -2,6 +2,9 @@
 # https://www2.cs.arizona.edu/icon/library/fprocs.htm
 # https://unicon.sourceforge.io/up/functions.html
 
+$define aaa ;write("\n",center(&file,20,"="));write(center(&line,20,"="));every local_g := globalnames(debug_c_g) do {full_i := fullimage(variable(local_g));if full_i[1:5]~=="func" & full_i[1:5]~=="proc" then write("G-",&line,"\t",left(local_g,20,"-"),left(fullimage(variable(local_g)),80," "),"|")} ;every local_s := staticnames(debug_c_s) do write("S-",&line,"\t",left(local_s,20,"-"),left(fullimage(variable(local_s)),80," "),"|");every local_v := localnames(debug_c_l) do write("L-",&line,"\t",left(local_v,20,"-"),left(fullimage(variable(local_v)),80," "),"|");write("Key to continue:");ch:= getch();;write("Continued.\n");
+$define xxx ;write("\n",center(&file,20,"="));write(center(&line,20,"="));every local_s := staticnames(debug_c_s) do write("S-",&line,"\t",left(local_s,20,"-"),left(fullimage(variable(local_s)),80," "),"|");every local_v := localnames(debug_c_l) do write("L-",&line,"\t",left(local_v,20,"-"),left(fullimage(variable(local_v)),80," "),"|");write("Key to continue:");ch:= getch();write("Continued.\n");
+
 link dialog
 link file_dlg
 link fullimag
@@ -11,9 +14,6 @@ import gui
 $include "guih.icn"
 $include "utilz.icn"
 $include "parse.icn"
-
-$define aaa ;write("\n",center(&file,20,"="));write(center(&line,20,"="));every local_g := globalnames(debug_c_g) do {full_i := fullimage(variable(local_g));if full_i[1:5]~=="func" & full_i[1:5]~=="proc" then write("G-",&line,"\t",left(local_g,20,"-"),left(fullimage(variable(local_g)),80," "),"|")} ;every local_s := staticnames(debug_c_s) do write("S-",&line,"\t",left(local_s,20,"-"),left(fullimage(variable(local_s)),80," "),"|");every local_v := localnames(debug_c_l) do write("L-",&line,"\t",left(local_v,20,"-"),left(fullimage(variable(local_v)),80," "),"|");write("Key to continue:");ch:= getch();;write("Continued.\n");
-$define xxx ;write("\n",center(&file,20,"="));write(center(&line,20,"="));every local_s := staticnames(debug_c_s) do write("S-",&line,"\t",left(local_s,20,"-"),left(fullimage(variable(local_s)),80," "),"|");every local_v := localnames(debug_c_l) do write("L-",&line,"\t",left(local_v,20,"-"),left(fullimage(variable(local_v)),80," "),"|");write("Key to continue:");ch:= getch();write("Continued.\n");
 
 class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, table_xer, text_field_activity_name, text_field_task_id, table_2, table_xer_results, text_button_export, table_column_1, table_column_2, label_loaded_file, text_list_1, label_path, label_solution, text_list_solutions, table_column_3, table_column_4)
    
@@ -57,8 +57,6 @@ class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, tabl
                result_sol_tbl := table(0)
                index := 1
                every result_path := gen_path(g_tbl_tasks_code[sel_task_code].task_id) do {
-                    #write(fullimage(result_path))
-                    #print_tasks(result_path)
                     every task := !result_path do put(results_list,[g_tbl_tasks_id[task].task_code,g_tbl_tasks_id[task].task_name])
                     insert(result_sol_tbl,index,results_list)
                     put(result_sols,"Sol. " || index)
