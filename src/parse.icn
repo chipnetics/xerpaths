@@ -3,18 +3,18 @@ link fullimag
 link strings
 link tuple
 
-record relation(rel_type,start_id,end_id)
-record task(task_id,task_code,task_name)
+record r_relation(rel_type,start_id,end_id)
+record r_task(task_id,task_code,task_name)
 
-global arr_relations,tbl_tasks_code,tbl_tasks_id
+global g_arr_relations,g_tbl_tasks_code,g_tbl_tasks_id
 
 procedure load_structures(xer_filename)
     local xer_file := open(xer_filename,"r") | stop("Cannot open XER file.")
     every put(xer_data := [],!xer_file)
 
-    arr_relations:= []
-    tbl_tasks_code:= table(0)
-    tbl_tasks_id:= table(0)
+    g_arr_relations:= []
+    g_tbl_tasks_code:= table(0)
+    g_tbl_tasks_id:= table(0)
     
     index := 1
     every xer_line := !xer_data do {
@@ -22,7 +22,7 @@ procedure load_structures(xer_filename)
             every i:=index+2 to *xer_data do {
                 if find("%T",xer_data[i])==1 then break
                 fields := fieldlist(xer_data[i],"\t")
-                put(arr_relations,relation(fields[7],fields[3],fields[4]))
+                put(g_arr_relations,r_relation(fields[7],fields[4],fields[3]))
             }
         }
         else if xer_line == "%T\tTASK" then {
@@ -30,8 +30,8 @@ procedure load_structures(xer_filename)
                 if find("%T",xer_data[i])==1 then break
                 fields := fieldlist(xer_data[i],"\t")
                 # Check if way to use multiple keys without using two tables
-                insert(tbl_tasks_code,fields[15],task(fields[2],fields[15],fields[16]))
-                insert(tbl_tasks_id,fields[2],task(fields[2],fields[15],fields[16]))
+                insert(g_tbl_tasks_code,fields[15],r_task(fields[2],fields[15],fields[16]))
+                insert(g_tbl_tasks_id,fields[2],r_task(fields[2],fields[15],fields[16]))
              }
         }
         index +:= 1
@@ -39,7 +39,7 @@ procedure load_structures(xer_filename)
 end
 
 procedure print_tasks(taskid_list)
-    every task := !taskid_list do write("\t",tbl_tasks_id[task].task_id,"\t",tbl_tasks_id[task].task_code,"\t",tbl_tasks_id[task].task_name)
+    every task := !taskid_list do write("\t",g_tbl_tasks_id[task].task_id,"\t",g_tbl_tasks_id[task].task_code,"\t",g_tbl_tasks_id[task].task_name)
 end
 
 # Generates complete paths starting from 'from'
@@ -57,9 +57,9 @@ end
 # Generates possible destinations from 'from'
 procedure destination(from)
     repeat {
-        every i:=1 to *arr_relations do {
-            if arr_relations[i].start_id == from then {
-                suspend arr_relations[i].end_id
+        every i:=1 to *g_arr_relations do {
+            if g_arr_relations[i].start_id == from then {
+                suspend g_arr_relations[i].end_id
             }
         }
         fail

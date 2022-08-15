@@ -12,9 +12,11 @@ $include "guih.icn"
 $include "utilz.icn"
 $include "parse.icn"
 
+$define aaa ;write("\n",center(&file,20,"="));write(center(&line,20,"="));every local_g := globalnames(debug_c_g) do {full_i := fullimage(variable(local_g));if full_i[1:5]~=="func" & full_i[1:5]~=="proc" then write("G-",&line,"\t",left(local_g,20,"-"),left(fullimage(variable(local_g)),80," "),"|")} ;every local_s := staticnames(debug_c_s) do write("S-",&line,"\t",left(local_s,20,"-"),left(fullimage(variable(local_s)),80," "),"|");every local_v := localnames(debug_c_l) do write("L-",&line,"\t",left(local_v,20,"-"),left(fullimage(variable(local_v)),80," "),"|");write("Key to continue:");ch:= getch();;write("Continued.\n");
+$define xxx ;write("\n",center(&file,20,"="));write(center(&line,20,"="));every local_s := staticnames(debug_c_s) do write("S-",&line,"\t",left(local_s,20,"-"),left(fullimage(variable(local_s)),80," "),"|");every local_v := localnames(debug_c_l) do write("L-",&line,"\t",left(local_v,20,"-"),left(fullimage(variable(local_v)),80," "),"|");write("Key to continue:");ch:= getch();write("Continued.\n");
+
 class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, table_xer, text_field_activity_name, text_field_task_id, table_2, table_xer_results, text_button_export, table_column_1, table_column_2, label_loaded_file, text_list_1, label_path, label_solution, text_list_solutions, table_column_3, table_column_4)
    
-   local xer_table_contents := []
    local filtered_results := []
    local result_sol_tbl := table(0)
    
@@ -29,12 +31,12 @@ class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, tabl
    end
 
    method on_button_open_xer(ev)
+      local xer_table_contents := []
       a_file := getfilename()
       if *a_file.file.contents==0 then return
       load_structures(a_file.file.contents)
-      xer_table_contents := []
       result_sol_tbl := table(0)
-      every keyval := key(tbl_tasks_code) do put(xer_table_contents,[tbl_tasks_code[keyval].task_code,tbl_tasks_code[keyval].task_name])
+      every keyval := key(g_tbl_tasks_code) do put(xer_table_contents,[g_tbl_tasks_code[keyval].task_code,g_tbl_tasks_code[keyval].task_name])
       filtered_results := xer_table_contents
       table_xer.set_contents(xer_table_contents)
       text_list_solutions.set_contents([])
@@ -45,20 +47,19 @@ class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, tabl
    method on_table_xer(ev)
         local sel_task_code
         local rel_task_id
+        
         every selected := !table_xer.get_selections() do {
                sel_task_code := filtered_results[selected][1]
-               rel_task_id := tbl_tasks_code[sel_task_code].task_id
+               rel_task_id := g_tbl_tasks_code[sel_task_code].task_id
                write(sel_task_code,"\t",rel_task_id)
                result_sols := []
                results_list := []
                result_sol_tbl := table(0)
                index := 1
-               every result_path := gen_path(tbl_tasks_code[sel_task_code].task_id) do {
-                    write(fullimage(result_path))
-                    print_tasks(result_path)
-                    
-                    every task := !result_path do put(results_list,[tbl_tasks_id[task].task_code,tbl_tasks_id[task].task_name])
-                    
+               every result_path := gen_path(g_tbl_tasks_code[sel_task_code].task_id) do {
+                    #write(fullimage(result_path))
+                    #print_tasks(result_path)
+                    every task := !result_path do put(results_list,[g_tbl_tasks_id[task].task_code,g_tbl_tasks_id[task].task_name])
                     insert(result_sol_tbl,index,results_list)
                     put(result_sols,"Sol. " || index)
                     results_list := []
@@ -73,9 +74,9 @@ class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, tabl
    method on_text_field_activity_name(ev)
       re_content := text_field_activity_name.get_contents()
       filtered_results := []
-      every keyval := key(tbl_tasks_code) do {
-         if tbl_tasks_code[keyval].task_name ? ReFind(re_content) then 
-             put(filtered_results,[tbl_tasks_code[keyval].task_code,tbl_tasks_code[keyval].task_name])
+      every keyval := key(g_tbl_tasks_code) do {
+         if g_tbl_tasks_code[keyval].task_name ? ReFind(re_content) then 
+             put(filtered_results,[g_tbl_tasks_code[keyval].task_code,g_tbl_tasks_code[keyval].task_name])
       }
       table_xer.set_contents(filtered_results)
    end
@@ -83,9 +84,9 @@ class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, tabl
    method on_text_field_task_id(ev)
       re_content := text_field_task_id.get_contents()
       filtered_results := []
-      every keyval := key(tbl_tasks_code) do {
-         if tbl_tasks_code[keyval].task_code ? ReFind(re_content) then 
-             put(filtered_results,[tbl_tasks_code[keyval].task_code,tbl_tasks_code[keyval].task_name])
+      every keyval := key(g_tbl_tasks_code) do {
+         if g_tbl_tasks_code[keyval].task_code ? ReFind(re_content) then 
+             put(filtered_results,[g_tbl_tasks_code[keyval].task_code,g_tbl_tasks_code[keyval].task_name])
       }
       table_xer.set_contents(filtered_results)
    end
@@ -96,8 +97,6 @@ class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, tabl
    method on_text_list_solutions(ev)
       every selection := !text_list_solutions.get_selections() do 
                   table_xer_results.set_contents(result_sol_tbl[selection])
-
-      #table_xer_results.set_contents(result_sol_tbl)
    end
 
    method setup()
@@ -205,7 +204,7 @@ end
 
 procedure main()
    local d
-   ReCaseIndependent()
+   ReCaseIndependent()  # Set regex matching to case insensitive.
    d := XERPath()
    d.show_modal()
 end
