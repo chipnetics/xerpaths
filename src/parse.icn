@@ -4,7 +4,10 @@ link strings
 link tuple
 
 record r_relation(rel_type,start_id,end_id)
-record r_task(task_id,task_code,task_name)
+record r_task(task_id,task_code,task_name,target_start,target_finish,
+                is_completed,actual_duration,
+                opti_duration,target_duration,pess_duration,
+                pert_mean,prior_alpha,prior_beta)
 
 global g_arr_relations,g_tbl_tasks_code,g_tbl_tasks_id
 
@@ -29,9 +32,19 @@ procedure load_structures(xer_filename)
             every i:=index+2 to *xer_data do {
                 if find("%T",xer_data[i])==1 then break
                 fields := fieldlist(xer_data[i],"\t")
-                # Check if way to use multiple keys without using two tables
-                insert(g_tbl_tasks_code,fields[15],r_task(fields[2],fields[15],fields[16]))
-                insert(g_tbl_tasks_id,fields[2],r_task(fields[2],fields[15],fields[16]))
+                
+                # Check if 100% complete, if so use actual dates o.w. use target dates.
+                if fields[6]==100 then iscmpl:="Y" & act_duration:=days_diff(replace(fields[29],"-","/"),replace(fields[30],"-","/"))  else iscmpl:="" & act_duration:=""
+                likely_duration := days_diff(replace(fields[38],"-","/"),replace(fields[39],"-","/"))
+                
+                opti := likely_duration*?[0.6,0.65,0.7,0.75,0.8,0.85,0.90]
+                pess := likely_duration*?[1.1,1.15,1.2,1.25,1.3,1.35,1.4]
+                
+                insert(g_tbl_tasks_code,fields[15],r_task(fields[2],fields[15],fields[16],fields[38],fields[39],
+                        iscmpl,act_duration,
+                        opti,likely_duration,pess,
+                        beta_mean(opti,likely_duration,pess),prior_alpha(opti,likely_duration,pess),prior_beta(opti,likely_duration,pess)))
+                insert(g_tbl_tasks_id,fields[2],fields[15])
              }
         }
         index +:= 1
@@ -39,7 +52,7 @@ procedure load_structures(xer_filename)
 end
 
 procedure print_tasks(taskid_list)
-    every task := !taskid_list do write("\t",g_tbl_tasks_id[task].task_id,"\t",g_tbl_tasks_id[task].task_code,"\t",g_tbl_tasks_id[task].task_name)
+    every task := !taskid_list do write("\t",g_tbl_tasks_code[g_tbl_tasks_id[task]].task_id,"\t",g_tbl_tasks_code[g_tbl_tasks_id[task]].task_code,"\t",g_tbl_tasks_code[g_tbl_tasks_id[task]].task_name)
 end
 
 # Generates complete paths starting from 'from'
@@ -65,3 +78,47 @@ procedure destination(from)
         fail
     }
 end
+
+procedure beta_mean(opti,likely,pess)
+    return ((pess+4*likely+opti)/6.0)
+end
+
+procedure prior_alpha(opti,likely,pess)
+    if opti == pess | (pess-likely)-(likely-opti) < 0.001  then return 3
+    else return (((pess+4*likely+opti)/6.0)-opti)*(2*likely-opti-pess)/((likely-((pess+4*likely+opti)/6.0))*(pess-opti))|3
+end
+
+procedure prior_beta(opti,likely,pess)
+    if opti == pess | (pess-likely)-(likely-opti) < 0.001  then return 3
+    else return ((((pess+4*likely+opti)/6.0)-opti)*(2*likely-opti-pess)/((likely-((pess+4*likely+opti)/6.0))*(pess-opti))*(pess-((pess+4*likely+opti)/6.0)))/(((pess+4*likely+opti)/6.0)-opti)
+end
+
+procedure post_alpha(opti,actual,pess,pace)
+    return prior_alpha(opti,likely,pess) + ((actual-opti)/(pess-opti))*pace
+end
+
+procedure post_beta(opti,actual,pess,pace)
+    return prior_beta(opti,likely,pess) + pace - ((actual-opti)/(pess-opti))*pace
+end
+
+procedure gamma(z)	# Stirling's approximation
+    return (2*&pi/z)^0.5 * (z/&e)^z
+end
+
+procedure beta(a,b)
+    return (gamma(a)*gamma(b))/gamma(a+b)
+end
+
+class beta4()
+
+    local alpha
+    local beta
+    local a
+    local b
+
+    method pdf(y)
+        return (1/(b-a))*((((y-a)/(b-a))^(alpha-1)*(1-((y-a)/(b-a))^(beta-1)))/beta(alpha,beta))
+    end
+
+end
+
