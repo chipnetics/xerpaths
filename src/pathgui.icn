@@ -95,9 +95,10 @@ class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, tabl
                         pred_dur:=""
                      }
                      else { alpha_post:="" & beta_post:="" & mode_post:="" & pred_dur := integer(g_tbl_tasks_code[kv].target_duration*ratio);
-                        early_start_date := early_finish_date # Any float should get added here.
+                        
+                        early_start_date := if /early_finish_date then g_tbl_tasks_code[kv].early_start else early_finish_date# Any float should get added here.
                         early_finish_date := days_add(replace(early_start_date,"-","/"),pred_dur*?[0.6,0.65,0.7,0.75,0.8,0.85,0.90]) #Original risk ranging shoudl be carried here
-                        late_start_date := late_finish_date # Any float should get added here.
+                        late_start_date := if /late_finish_date then g_tbl_tasks_code[kv].late_start else late_finish_date# Any float should get added here.
                         late_finish_date := days_add(replace(late_start_date,"-","/"),pred_dur*?[1.1,1.15,1.2,1.25,1.3,1.35,1.4]) #Original risk ranging shoudl be carried here
                       }
 
