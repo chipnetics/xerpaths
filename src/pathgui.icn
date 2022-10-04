@@ -17,6 +17,7 @@ class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, tabl
    
    local filtered_results := []
    local result_sol_tbl := table(0)
+   local result_sol_tbl := table(0)
    
    method component_setup()
       self.setup()
@@ -28,6 +29,7 @@ class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, tabl
    method init_dialog()
    end
 
+   # Call-back for opening and selecting XER and loading data tables.
    method on_button_open_xer(ev)
       local xer_table_contents := []
       a_file := getfilename()
@@ -54,6 +56,8 @@ class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, tabl
       label_loaded_file.set_label("Loaded: "||a_file.file.contents)
    end
 
+   # Callback for clicks on the schedule data.
+   # Both generates all path solutions, and calculates prediction model (for all paths)
    method on_table_xer(ev)
         local sel_task_code
         local rel_task_id
@@ -64,13 +68,14 @@ class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, tabl
                write(sel_task_code,"\t",rel_task_id)
                result_sols := []
                results_list := []
-               result_sol_tbl := table(0)
                index := 1
                every result_path := gen_path(g_tbl_tasks_code[sel_task_code].task_id) do {
 
                   # initial prediction ratio is 1x multiplier
                   ratio:=1
                   pred_likely_dur:=&null
+                  pred_opti_dur:=&null
+                  pred_pess_dur:=&null
 
                     every task := !result_path do {
 
@@ -139,6 +144,7 @@ class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, tabl
             }
    end
 
+   # Callback filter the schedule by task_name based on typed text in input field (using regex)
    method on_text_field_activity_name(ev)
       re_content := text_field_activity_name.get_contents()
       filtered_results := []
@@ -161,6 +167,7 @@ class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, tabl
       table_xer.set_contents(filtered_results)
    end
 
+   # Callback filter the schedule by task_id based on typed text in input field (using regex)
    method on_text_field_task_id(ev)
       re_content := text_field_task_id.get_contents()
       filtered_results := []
@@ -183,9 +190,23 @@ class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, tabl
       table_xer.set_contents(filtered_results)
    end
 
+   # Callback to export the currently selected solution results to a dated text-file.
    method on_text_button_export(ev)
+      sol_number := text_list_solutions.get_selections()[1]
+      fout:=open(replace(&date,"/",".") || "_predication_results.txt","w") | write("Could not open file for writing")
+      str_build := ""
+      every result := !result_sol_tbl[sol_number] do {
+         every elem := !result do {
+            str_build ||:= elem || "\t"
+         }
+         str_build[-1] := "" # Delete trailing tab.
+         write(fout,str_build)
+         str_build := ""
+      }
+      close(fout)
    end
 
+   # Callback when user clicks on Sol 1,2, etc... display the results table for that particular path.
    method on_text_list_solutions(ev)
       every selection := !text_list_solutions.get_selections() do table_xer_results.set_contents(result_sol_tbl[selection])
    end
