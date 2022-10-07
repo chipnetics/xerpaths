@@ -13,3 +13,4 @@ src/utilz
 src/lilbugger
 src/*_dbg.icn
 src/pathgui_dbg
+src/ubugger

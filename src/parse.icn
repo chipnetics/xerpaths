@@ -15,7 +15,24 @@ record r_task(task_id,task_code,task_name,
                 pert_mean,prior_alpha,prior_beta,
                 evidence,pace)
 
-global g_arr_relations,g_tbl_tasks_code,g_tbl_tasks_id
+
+# Record for import of ranging template fields (only what's neccessary)
+record r_ranging_template(task_code,category,opti_decimal,pess_decimal)
+
+global g_arr_relations,g_tbl_tasks_code,g_tbl_tasks_id,g_tbl_ranging_template
+
+
+# procedure to load the ranging template
+procedure import_ranging_template(ranging_filename)
+    local ranging_file := open(ranging_filename,"r") | stop("Cannot open ranging file.")
+    every put(ranging_data := [],!ranging_file)
+    pop(ranging_data)  # Pop off the header.
+    g_tbl_ranging_template := table()
+    every ranging_line := !ranging_data do {
+        fields := fieldlist(ranging_line,"\t")
+        insert(g_tbl_ranging_template,fields[1],r_ranging_template(fields[1],fields[3],fields[4],fields[5]))
+    }
+end
 
 # procedure to update the target duration in the structures with the original baseline duration
 # hopefully for better accuracy.
@@ -34,6 +51,7 @@ procedure update_curr_structures(xer_filename)
                 fields := fieldlist(xer_data[i],"\t")
                 #write(i," ",xer_data[i])
                 # If the task_name exists in the table then populate baseline start/finish/duration members in record.
+                #xxx
                 if \g_tbl_tasks_code[fields[15]] then{
                     #write("found",fields[15])
                     g_tbl_tasks_code[fields[15]].base_start := fields[38]
