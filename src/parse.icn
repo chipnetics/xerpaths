@@ -5,6 +5,7 @@ link tuple
 
 record r_relation(rel_type,start_id,end_id)
 record r_task(task_id,task_code,task_name,
+                base_start,base_finish,base_duration,
                 target_start,target_finish,
                 actual_start,actual_finish,
                 early_start,early_finish,
@@ -16,13 +17,43 @@ record r_task(task_id,task_code,task_name,
 
 global g_arr_relations,g_tbl_tasks_code,g_tbl_tasks_id
 
+# procedure to update the target duration in the structures with the original baseline duration
+# hopefully for better accuracy.
+procedure update_curr_structures(xer_filename)
+
+    local xer_file := open(xer_filename,"r") | stop("Cannot open XER file to set as baseline.")
+    every put(xer_data := [],!xer_file)
+
+    index := 1
+    every xer_line := !xer_data do {
+        
+        if xer_line == "%T\tTASK" then {
+            #write(i," ",xer_line)
+            every i:=index+2 to *xer_data do {
+                if find("%T",xer_data[i])==1 then break
+                fields := fieldlist(xer_data[i],"\t")
+                #write(i," ",xer_data[i])
+                # If the task_name exists in the table then populate baseline start/finish/duration members in record.
+                if \g_tbl_tasks_code[fields[15]] then{
+                    #write("found",fields[15])
+                    g_tbl_tasks_code[fields[15]].base_start := fields[38]
+                    g_tbl_tasks_code[fields[15]].base_finish := fields[39]
+                    g_tbl_tasks_code[fields[15]].base_duration := days_diff(replace(fields[38],"-","/"),replace(fields[39],"-","/"))
+                }       
+            }
+        }   
+        index +:= 1
+    }
+
+end
+
 procedure load_structures(xer_filename)
     local xer_file := open(xer_filename,"r") | stop("Cannot open XER file.")
     every put(xer_data := [],!xer_file)
 
     g_arr_relations:= []
-    g_tbl_tasks_code:= table(0)
-    g_tbl_tasks_id:= table(0)
+    g_tbl_tasks_code:= table()
+    g_tbl_tasks_id:= table()
     
     index := 1
     every xer_line := !xer_data do {
@@ -41,22 +72,23 @@ procedure load_structures(xer_filename)
                 # Check if 100% complete, if so use actual dates o.w. use target dates.
                 if fields[6]==100 then iscmpl:="Y" & act_duration:=days_diff(replace(fields[29],"-","/"),replace(fields[30],"-","/"))  else iscmpl:="" & act_duration:=""
                 
-                likely_duration := days_diff(replace(fields[38],"-","/"),replace(fields[39],"-","/"))
+                target_duration := days_diff(replace(fields[38],"-","/"),replace(fields[39],"-","/")) # target duration -> likely duration.
                 
-                opti := likely_duration*?[0.6,0.65,0.7,0.75,0.8,0.85,0.90]
-                pess := likely_duration*?[1.1,1.15,1.2,1.25,1.3,1.35,1.4]
-
+                opti := target_duration*?[0.6,0.65,0.7,0.75,0.8,0.85,0.90]
+                pess := target_duration*?[1.1,1.15,1.2,1.25,1.3,1.35,1.4]
 
                 if fields[6]==100 & (pess-opti)>0.001 & *act_duration>0 then evidence:=(act_duration-opti)/(pess-opti) & pace:=5 else evidence:="" & pace:=""
                 
+                # Put the struct into the table, with task_name as key.
                 insert(g_tbl_tasks_code,fields[15],r_task(fields[2],fields[15],fields[16],
+                        "","","",  # Baseline start/finish/duration blank on initial load, unless user selects a baseline file.
                         fields[38],fields[39],
                         fields[29],fields[30],
                         fields[34],fields[35],
                         fields[31],fields[32],
                         iscmpl,act_duration,
-                        opti,likely_duration,pess,
-                        beta_mean(opti,likely_duration,pess),prior_alpha(opti,likely_duration,pess),prior_beta(opti,likely_duration,pess),
+                        opti,target_duration,pess,
+                        beta_mean(opti,target_duration,pess),prior_alpha(opti,target_duration,pess),prior_beta(opti,target_duration,pess),
                         evidence,pace))
                 insert(g_tbl_tasks_id,fields[2],fields[15])
              }
