@@ -45,15 +45,11 @@ procedure update_curr_structures(xer_filename)
     every xer_line := !xer_data do {
         
         if xer_line == "%T\tTASK" then {
-            #write(i," ",xer_line)
             every i:=index+2 to *xer_data do {
                 if find("%T",xer_data[i])==1 then break
                 fields := fieldlist(xer_data[i],"\t")
-                #write(i," ",xer_data[i])
                 # If the task_name exists in the table then populate baseline start/finish/duration members in record.
-                #xxx
                 if \g_tbl_tasks_code[fields[15]] then{
-                    #write("found",fields[15])
                     g_tbl_tasks_code[fields[15]].base_start := fields[38]
                     g_tbl_tasks_code[fields[15]].base_finish := fields[39]
                     g_tbl_tasks_code[fields[15]].base_duration := days_diff(replace(fields[38],"-","/"),replace(fields[39],"-","/"))
