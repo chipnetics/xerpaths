@@ -19,8 +19,11 @@ record r_task(task_id,task_code,task_name,
 # Record for import of ranging template fields (only what's neccessary)
 record r_ranging_template(task_code,category,opti_decimal,pess_decimal)
 
-global g_arr_relations,g_tbl_tasks_code,g_tbl_tasks_id,g_tbl_ranging_template
-
+global g_arr_relations
+global g_tbl_tasks_code
+global g_tbl_tasks_id
+global g_tbl_ranging_template
+global g_tbl_trans_lags         # table for lag from pred to succ (key is predsucc concatenated)
 
 # procedure to load the ranging template
 procedure import_ranging_template(ranging_filename)
@@ -52,7 +55,7 @@ procedure update_curr_structures(xer_filename)
                 if \g_tbl_tasks_code[fields[15]] then{
                     g_tbl_tasks_code[fields[15]].base_start := fields[38]
                     g_tbl_tasks_code[fields[15]].base_finish := fields[39]
-                    g_tbl_tasks_code[fields[15]].base_duration := days_diff(replace(fields[38],"-","/"),replace(fields[39],"-","/"))
+                    g_tbl_tasks_code[fields[15]].base_duration := days_diff(fields[38],fields[39])
                 }       
             }
         }   
@@ -84,15 +87,15 @@ procedure load_structures(xer_filename)
                 fields := fieldlist(xer_data[i],"\t")
                 
                 # Check if 100% complete, if so use actual dates o.w. use target dates.
-                if fields[6]==100 then iscmpl:="Y" & act_duration:=days_diff(replace(fields[29],"-","/"),replace(fields[30],"-","/"))  else iscmpl:="" & act_duration:=""
+                if fields[6]==100 then iscmpl:="Y" & act_duration:=days_diff(fields[29],fields[30])  else iscmpl:="" & act_duration:=""
                 
-                target_duration := days_diff(replace(fields[38],"-","/"),replace(fields[39],"-","/")) # target duration -> likely duration.
+                target_duration := days_diff(fields[38],fields[39]) # target duration -> likely duration.
                 
                 opti := target_duration*?[0.6,0.65,0.7,0.75,0.8,0.85,0.90]
                 pess := target_duration*?[1.1,1.15,1.2,1.25,1.3,1.35,1.4]
 
-                if fields[6]==100 & (pess-opti)>0.001 & *act_duration>0 then evidence:=(act_duration-opti)/(pess-opti) & pace:=5 else evidence:="" & pace:=""
-                
+                if fields[6]==100 & (pess-opti)>0.001 & integer(act_duration)>=0 then evidence:=(act_duration-opti)/(pess-opti) & pace:=5 else evidence:="" & pace:=""
+
                 # Put the struct into the table, with task_name as key.
                 insert(g_tbl_tasks_code,fields[15],r_task(fields[2],fields[15],fields[16],
                         "","","",  # Baseline start/finish/duration blank on initial load, unless user selects a baseline file.
@@ -108,6 +111,18 @@ procedure load_structures(xer_filename)
              }
         }
         index +:= 1
+    }
+
+    ## Calculate the lags between target_end_date of predecessor & target_start_date of successor.
+    g_tbl_trans_lags := table(0)
+    every elem := !g_arr_relations do {
+        start_task_code := g_tbl_tasks_id[elem.start_id]
+        end_task_code := g_tbl_tasks_id[elem.end_id]
+        pred_target_end := g_tbl_tasks_code[start_task_code].target_finish
+        succ_target_start := g_tbl_tasks_code[end_task_code].target_start
+        pred_to_succ_lag :=  days_diff(pred_target_end,succ_target_start)
+        insert(g_tbl_trans_lags,elem.start_id||elem.end_id,pred_to_succ_lag)  # key is concat of pred and succ task IDs.
+        #write(elem.start_id,"\t",elem.end_id,"\t",pred_target_end,"\t",succ_target_start,"\t",elem.pred_succ_lag)
     }
 end
 

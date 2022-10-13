@@ -11,12 +11,15 @@ link regexp
 import gui
 $include "guih.icn"
 
+$ifdef DEBUG
+link parse_dbg
+link utilz_dbg
+$else
 link parse
 link utilz
-#link parse_dbg
-#link utilz_dbg
+$endif
 
-class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, table_xer, text_field_activity_name, text_field_task_id, table_2, table_xer_results, text_button_export, table_column_1, table_column_2, label_loaded_file, text_list_1, label_path, label_solution, text_list_solutions, table_column_3, table_column_4, table_column_likely, table_column_opti, table_column_pess, table_column_alpha_post, table_column_alpha_prior, table_column_beta_post, table_column_beta_prior, table_column_duration, table_column_is_complated, table_column_pert_mean, table_column_evidence, table_column_pace, table_column_ef, table_column_es, table_column_lf, table_column_ls, table_column_alphapost, table_column_betapost, table_column_actualduration, table_column_predduration, table_column_mode_post, table_column_original_ml, table_column_actual_dur, table_column_orig_dur, table_column_pred_dur, table_column_30, table_column_31, text_button_4, text_button_quit, text_button_5, button_baseline, table_column_32, button_export_template, text_button_7, button_import_template, table_column_range_opti, table_column_range_pess, table_column_35, table_column_36)
+class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, table_xer, text_field_activity_name, text_field_task_id, table_2, table_xer_results, text_button_export, table_column_1, table_column_2, label_loaded_file, text_list_1, label_path, label_solution, text_list_solutions, table_column_3, table_column_4, table_column_likely, table_column_opti, table_column_pess, table_column_alpha_post, table_column_alpha_prior, table_column_beta_post, table_column_beta_prior, table_column_duration, table_column_is_complated, table_column_pert_mean, table_column_evidence, table_column_pace, table_column_ef, table_column_es, table_column_lf, table_column_ls, table_column_alphapost, table_column_betapost, table_column_actualduration, table_column_predduration, table_column_mode_post, table_column_original_ml, table_column_actual_dur, table_column_orig_dur, table_column_pred_dur, table_column_30, table_column_31, text_button_4, text_button_quit, text_button_5, button_baseline, table_column_32, button_export_template, text_button_7, button_import_template, table_column_range_opti, table_column_range_pess, table_column_35, table_column_36, table_column_pred_lag)
    
    local filtered_results := []
    local result_sol_tbl := table(0)
@@ -25,8 +28,8 @@ class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, tabl
 
    method component_setup()
       self.setup()
-      #load_structures("DD20220529.xer")
-      #load_xer_into_table("DD20220529.xer")
+      load_structures("DD20220529.xer")
+      load_xer_into_table("DD20220529.xer")
    end
 
    method end_dialog()
@@ -77,16 +80,19 @@ class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, tabl
         local rel_task_id
         
         every selected := !table_xer.get_selections() do {
-               sel_task_code := filtered_results[selected][1]
-               rel_task_id := g_tbl_tasks_code[sel_task_code].task_id
+               sel_task_code := filtered_results[selected][1]  # the clicked-on task-code
+               rel_task_id := g_tbl_tasks_code[sel_task_code].task_id # associated task-ID
    
                result_sols := []
                results_list := []
                index := 1
+
                every result_path := gen_path(g_tbl_tasks_code[sel_task_code].task_id) do {
+                  idx:=1
 
                   # initial prediction ratio is 1x multiplier
                     every task := !result_path do {
+                     idx+:=1
 
                      opti_factor:=&null
                      pess_factor:=&null
@@ -95,7 +101,6 @@ class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, tabl
                      pred_pess_dur:=&null
                      delta_early_start:=&null
                      delta_early_finish:=&null
-                     ratio:=1
 
                      kv := g_tbl_tasks_id[task]
                      evidence:=g_tbl_tasks_code[kv].evidence
@@ -103,7 +108,7 @@ class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, tabl
                      opti:=g_tbl_tasks_code[kv].opti_duration
                      pess:=g_tbl_tasks_code[kv].pess_duration
 
-                     if *evidence>0 & *pace>0 then {
+                    if *evidence>0 & *pace>0 then {
                         alpha_post := frn(g_tbl_tasks_code[kv].prior_alpha + (evidence*pace),0,1)
                         beta_post := frn(g_tbl_tasks_code[kv].prior_beta + (pace-evidence*pace),0,1)
                         mode_post := frn((pess-opti)*(alpha_post-1)/(alpha_post+beta_post-2)+opti,0,1)
@@ -111,10 +116,17 @@ class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, tabl
                         
                         ratio := mode_post/g_tbl_tasks_code[kv].target_duration
                         
+                        # For completed activities replace es/ef/ls/lf with the as/af
                         early_start_date := g_tbl_tasks_code[kv].actual_start[1:11]  # Strip off time
                         early_finish_date := g_tbl_tasks_code[kv].actual_finish[1:11] # Strip off time
                         late_start_date := g_tbl_tasks_code[kv].actual_start[1:11] # Strip off time
                         late_finish_date := g_tbl_tasks_code[kv].actual_finish[1:11] # Strip off time
+                     }
+                     else if integer(g_tbl_tasks_code[kv].actual_duration)=0 then {  # Completed milestones won't have evidence and no post beta/alpha
+                        early_start_date := g_tbl_tasks_code[kv].actual_start[1:11]  
+                        early_finish_date := g_tbl_tasks_code[kv].actual_finish[1:11] 
+                        late_start_date := g_tbl_tasks_code[kv].actual_start[1:11] 
+                        late_finish_date := g_tbl_tasks_code[kv].actual_finish[1:11] 
                      }
                      else { 
                         alpha_post:="" & beta_post:="" & mode_post:="" & pred_likely_dur := integer(g_tbl_tasks_code[kv].target_duration*ratio);
@@ -130,16 +142,22 @@ class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, tabl
                         pred_opti_dur := frn(pred_likely_dur*opti_factor,0,1)
                         pred_pess_dur := frn(pred_likely_dur*pess_factor,0,1)
 
-                        early_start_date := if /early_finish_date then g_tbl_tasks_code[kv].early_start else early_finish_date# Any float should get added here.
-                        early_finish_date := days_add(replace(early_start_date,"-","/"),pred_likely_dur*opti_factor) #Original risk ranging shoudl be carried here
+                        pred_to_succ_lag := g_tbl_trans_lags[result_path[idx-2]||task]  # table lookup (uses key of concat of pred and succ ID)
+
+                        early_start_date := if /early_finish_date then g_tbl_tasks_code[kv].early_start else early_finish_date 
+                        early_start_date := days_add(early_start_date,pred_to_succ_lag)  # Add in the lag between current pred finish and succ start.
+
+                        early_finish_date := days_add(early_start_date,pred_likely_dur*opti_factor) #Original risk ranging shoudl be carried here
+                       
                         late_start_date := if /late_finish_date then g_tbl_tasks_code[kv].late_start else late_finish_date# Any float should get added here.
-                        late_finish_date := days_add(replace(late_start_date,"-","/"),pred_likely_dur*pess_factor) #Original risk ranging shoudl be carried here
+                        late_start_date := days_add(late_start_date,pred_to_succ_lag)  # Add in the lag between current pred finish and succ start.
 
-                        delta_early_start := days_diff(replace(g_tbl_tasks_code[kv].early_start,"-","/"),replace(early_start_date,"-","/"))
-                        delta_early_finish := days_diff(replace(g_tbl_tasks_code[kv].early_finish,"-","/"),replace(early_start_date,"-","/"))
-                     
+                        late_finish_date := days_add(late_start_date,pred_likely_dur*pess_factor) #Original risk ranging shoudl be carried here
+
+                        delta_early_start := days_diff(g_tbl_tasks_code[kv].early_start,early_start_date)
+                        delta_early_finish := days_diff(g_tbl_tasks_code[kv].early_finish,early_finish_date)  
                       }
-
+                     
                       # If still null, set to empty string.
                       /pred_likely_dur := ""
                       /pred_opti_dur := ""
@@ -148,6 +166,7 @@ class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, tabl
                       /pess_factor := ""
                       /delta_early_start := ""
                       /delta_early_finish := ""
+                      /pred_to_succ_lag := ""
 
                       put(results_list,[g_tbl_tasks_code[kv].task_code,
                                           g_tbl_tasks_code[kv].task_name,
@@ -159,6 +178,7 @@ class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, tabl
                                           pred_opti_dur, # Pred Opti
                                           pred_likely_dur,  # Pred Likely
                                           pred_pess_dur, # Pred Pess
+                                          pred_to_succ_lag,
                                           replace(early_start_date,"/","-"),
                                           delta_early_start,
                                           replace(early_finish_date,"/","-"),
@@ -236,7 +256,7 @@ class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, tabl
       fout:=open(replace(&date,"/",".") || "_prediction_results.txt","w") | write("Could not open file for writing")
       
       str_build := ""
-      write(fout,"task_id\ttask_name\tbase_dur_days\tcurr_dur_days\tact_dur_days\trng_opti\trng_pess\tpred_opti\tpred_likely\tpred_pess\tpred_es\tdelta_es\tpred_ef\tdelta_ef\tpred_ls\tpred_lf\tevidence\tpace\talpha_post\tbeta_post\tmode_post")
+      write(fout,"task_id\ttask_name\tbase_dur_days\tcurr_dur_days\tact_dur_days\trng_opti\trng_pess\tpred_opti\tpred_likely\tpred_pess\tpred_lag\tpred_es\tdelta_es\tpred_ef\tdelta_ef\tpred_ls\tpred_lf\tevidence\tpace\talpha_post\tbeta_post\tmode_post")
       every result := !result_sol_tbl[sol_number] do {
          every elem := !result do {
             str_build ||:= elem || "\t"
@@ -444,6 +464,11 @@ class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, tabl
       table_column_31.set_internal_alignment("l")
       table_column_31.set_column_width(80)
       table_xer_results.add_column(table_column_31)
+      table_column_pred_lag := TableColumn()
+      table_column_pred_lag.set_label("Pred. Lag")
+      table_column_pred_lag.set_internal_alignment("l")
+      table_column_pred_lag.set_column_width(75)
+      table_xer_results.add_column(table_column_pred_lag)
       table_column_es := TableColumn()
       table_column_es.set_label("Early Start")
       table_column_es.set_internal_alignment("l")
@@ -572,6 +597,8 @@ end
 
 procedure main()
    local d
+
+   
    ReCaseIndependent()  # Set regex matching to case insensitive.
    d := XERPath()
 
@@ -584,7 +611,7 @@ end
 ### Ivib-v2 layout ##
 #class|Canvas|17|Name Table|table|integer|0|7|string|icon_button|intege
 #r|1|string|label|integer|5|string|table|integer|2|string|table_column|
-#integer|36|string|text_button|integer|7|string|text_field|integer|2|st
+#integer|37|string|text_button|integer|7|string|text_field|integer|2|st
 #ring|text_list|integer|1|SuperClass Name|string|Dialog|Import Name|str
 #ing|gui|Button Groups|class|ButtonGroupSet|2|Parent Canvas|1|Boxes|lis
 #t|0|Checkbox Groups|class|CheckBoxGroupSet|2|Parent Canvas|1|Boxes|lis
@@ -675,7 +702,7 @@ end
 #ng|100%-400|X Align|string|l|Y Align|string|t|Is shaded|null|Is Button
 # Subclass|null|Draw Border|null|Attribs|list|0|Tooltip|null|Accel|null
 #|Event Handlers|list|0|Class Variable|integer|1|Parent Component|1|Sel
-#ect One|null|Select Many|null|Columns|list|21|class|CanvasTableColumn|
+#ect One|null|Select Many|null|Columns|list|22|class|CanvasTableColumn|
 #6|Name|string|table_column_4|Class Variable|integer|1|Label|string|Tas
 #k ID|Column Width|integer|135|Internal Alignment|string|l|Auto width f
 #lag|null|class|CanvasTableColumn|6|Name|string|table_column_3|Class Va
@@ -702,116 +729,119 @@ end
 #olumn|6|Name|string|table_column_31|Class Variable|integer|1|Label|str
 #ing|Pred. Pess.|Column Width|integer|80|Internal Alignment|string|l|Au
 #to width flag|null|class|CanvasTableColumn|6|Name|string|table_column_
-#es|Class Variable|integer|1|Label|string|Early Start|Column Width|inte
-#ger|80|Internal Alignment|string|l|Auto width flag|null|class|CanvasTa
-#bleColumn|6|Name|string|table_column_35|Class Variable|integer|1|Label
-#|string|Delta ES|Column Width|integer|75|Internal Alignment|string|l|A
-#uto width flag|null|class|CanvasTableColumn|6|Name|string|table_column
-#_ef|Class Variable|integer|1|Label|string|Early Finish|Column Width|in
-#teger|80|Internal Alignment|string|l|Auto width flag|null|class|Canvas
-#TableColumn|6|Name|string|table_column_36|Class Variable|integer|1|Lab
-#el|string|Delta EF|Column Width|integer|75|Internal Alignment|string|l
-#|Auto width flag|null|class|CanvasTableColumn|6|Name|string|table_colu
-#mn_ls|Class Variable|integer|1|Label|string|Late Start|Column Width|in
-#teger|80|Internal Alignment|string|l|Auto width flag|null|class|Canvas
-#TableColumn|6|Name|string|table_column_lf|Class Variable|integer|1|Lab
-#el|string|Late Finish|Column Width|integer|80|Internal Alignment|strin
-#g|l|Auto width flag|null|class|CanvasTableColumn|6|Name|string|table_c
-#olumn_evidence|Class Variable|integer|1|Label|string|Evidence|Column W
-#idth|integer|75|Internal Alignment|string|l|Auto width flag|null|class
-#|CanvasTableColumn|6|Name|string|table_column_pace|Class Variable|inte
-#ger|1|Label|string|Pace|Column Width|integer|75|Internal Alignment|str
+#pred_lag|Class Variable|integer|1|Label|string|Pred. Lag|Column Width|
+#integer|75|Internal Alignment|string|l|Auto width flag|null|class|Canv
+#asTableColumn|6|Name|string|table_column_es|Class Variable|integer|1|L
+#abel|string|Early Start|Column Width|integer|80|Internal Alignment|str
 #ing|l|Auto width flag|null|class|CanvasTableColumn|6|Name|string|table
-#_column_alphapost|Class Variable|integer|1|Label|string|Alpha Post|Col
-#umn Width|integer|75|Internal Alignment|string|l|Auto width flag|null|
-#class|CanvasTableColumn|6|Name|string|table_column_betapost|Class Vari
-#able|integer|1|Label|string|Beta Post|Column Width|integer|75|Internal
+#_column_35|Class Variable|integer|1|Label|string|Delta ES|Column Width
+#|integer|75|Internal Alignment|string|l|Auto width flag|null|class|Can
+#vasTableColumn|6|Name|string|table_column_ef|Class Variable|integer|1|
+#Label|string|Early Finish|Column Width|integer|80|Internal Alignment|s
+#tring|l|Auto width flag|null|class|CanvasTableColumn|6|Name|string|tab
+#le_column_36|Class Variable|integer|1|Label|string|Delta EF|Column Wid
+#th|integer|75|Internal Alignment|string|l|Auto width flag|null|class|C
+#anvasTableColumn|6|Name|string|table_column_ls|Class Variable|integer|
+#1|Label|string|Late Start|Column Width|integer|80|Internal Alignment|s
+#tring|l|Auto width flag|null|class|CanvasTableColumn|6|Name|string|tab
+#le_column_lf|Class Variable|integer|1|Label|string|Late Finish|Column 
+#Width|integer|80|Internal Alignment|string|l|Auto width flag|null|clas
+#s|CanvasTableColumn|6|Name|string|table_column_evidence|Class Variable
+#|integer|1|Label|string|Evidence|Column Width|integer|75|Internal Alig
+#nment|string|l|Auto width flag|null|class|CanvasTableColumn|6|Name|str
+#ing|table_column_pace|Class Variable|integer|1|Label|string|Pace|Colum
+#n Width|integer|75|Internal Alignment|string|l|Auto width flag|null|cl
+#ass|CanvasTableColumn|6|Name|string|table_column_alphapost|Class Varia
+#ble|integer|1|Label|string|Alpha Post|Column Width|integer|75|Internal
 # Alignment|string|l|Auto width flag|null|class|CanvasTableColumn|6|Nam
-#e|string|table_column_mode_post|Class Variable|integer|1|Label|string|
-#Mode Post|Column Width|integer|75|Internal Alignment|string|l|Auto wid
-#th flag|null|class|CanvasTextButton|36|Parent Canvas|1|Name|string|tex
-#t_button_export|Class Name|string|TextButton|Import Name|string|gui|X 
-#Fix|null|Y Fix|null|W Fix|null|H Fix|null|W Default|integer|1|H Defaul
-#t|integer|1|X Spec|string|100%-97|Y Spec|string|366|W Spec|integer|88|
-#H Spec|integer|23|X Align|string|l|Y Align|string|t|Is shaded|integer|
-#1|Is Button Subclass|integer|1|Draw Border|null|Attribs|list|0|Tooltip
-#|null|Accel|null|Event Handlers|list|1|list|2|string|BUTTON_RELEASE_EV
-#ENT|string|on_text_button_export|Class Variable|integer|1|Parent Compo
-#nent|1|Label|string|Export Table|No Keyboard|null|Img Up|null|Img Down
-#|null|Img Width|null|Img Height|null|Is Checked Flag|null|Is Checkbox 
-#Flag|null|Parent CheckBoxGroup|null|Parent Button Group|null|Internal 
-#Align|string|c|class|CanvasLabel|27|Parent Canvas|1|Name|string|label_
-#loaded_file|Class Name|string|Label|Import Name|string|gui|X Fix|null|
-#Y Fix|null|W Fix|null|H Fix|null|W Default|null|H Default|integer|1|X 
-#Spec|integer|203|Y Spec|integer|18|W Spec|string|365|H Spec|integer|13
-#|X Align|string|l|Y Align|string|t|Is shaded|null|Is Button Subclass|n
-#ull|Draw Border|null|Attribs|list|0|Tooltip|null|Accel|null|Event Hand
-#lers|list|0|Class Variable|integer|1|Parent Component|1|Label|string||
-#Internal Align|string|l|class|CanvasTextList|29|Parent Canvas|1|Name|s
-#tring|text_list_solutions|Class Name|string|TextList|Import Name|strin
-#g|gui|X Fix|null|Y Fix|null|W Fix|null|H Fix|null|W Default|null|H Def
-#ault|null|X Spec|string|100%-80|Y Spec|string|85|W Spec|string|71|H Sp
-#ec|string|269|X Align|string|l|Y Align|string|t|Is shaded|null|Is Butt
-#on Subclass|null|Draw Border|integer|1|Attribs|list|0|Tooltip|null|Acc
-#el|null|Event Handlers|list|1|list|2|string|MOUSE_RELEASE_EVENT|string
-#|on_text_list_solutions|Class Variable|integer|1|Parent Component|1|Se
-#lect One|integer|1|Select Many|null|Checked|list|1|null|Contents|list|
-#1|string||class|CanvasLabel|27|Parent Canvas|1|Name|string|label_path|
-#Class Name|string|Label|Import Name|string|gui|X Fix|null|Y Fix|null|W
-# Fix|null|H Fix|null|W Default|null|H Default|integer|1|X Spec|string|
-#14|Y Spec|string|375|W Spec|string|31|H Spec|integer|13|X Align|string
-#|l|Y Align|string|t|Is shaded|null|Is Button Subclass|null|Draw Border
-#|null|Attribs|list|0|Tooltip|null|Accel|null|Event Handlers|list|0|Cla
-#ss Variable|integer|1|Parent Component|1|Label|string|Path|Internal Al
-#ign|string|l|class|CanvasLabel|27|Parent Canvas|1|Name|string|label_so
-#lution|Class Name|string|Label|Import Name|string|gui|X Fix|null|Y Fix
-#|null|W Fix|null|H Fix|null|W Default|integer|1|H Default|integer|1|X 
-#Spec|string|100%-80|Y Spec|string|66|W Spec|integer|54|H Spec|integer|
-#13|X Align|string|l|Y Align|string|t|Is shaded|null|Is Button Subclass
-#|null|Draw Border|null|Attribs|list|0|Tooltip|null|Accel|null|Event Ha
-#ndlers|list|0|Class Variable|integer|1|Parent Component|1|Label|string
-#|Solutions|Internal Align|string|l|class|CanvasTextButton|36|Parent Ca
-#nvas|1|Name|string|text_button_quit|Class Name|string|TextButton|Impor
-#t Name|string|gui|X Fix|null|Y Fix|null|W Fix|integer|1|H Fix|integer|
-#1|W Default|null|H Default|null|X Spec|string|100%-80|Y Spec|string|9|
-#W Spec|string|52|H Spec|string|23|X Align|string|l|Y Align|string|t|Is
-# shaded|null|Is Button Subclass|integer|1|Draw Border|null|Attribs|lis
-#t|0|Tooltip|null|Accel|null|Event Handlers|list|1|list|2|string|BUTTON
-#_RELEASE_EVENT|string|on_text_button_quit|Class Variable|integer|1|Par
-#ent Component|1|Label|string|Quit|No Keyboard|null|Img Up|null|Img Dow
-#n|null|Img Width|null|Img Height|null|Is Checked Flag|null|Is Checkbox
-# Flag|null|Parent CheckBoxGroup|null|Parent Button Group|null|Internal
-# Align|string|c|class|CanvasTextButton|36|Parent Canvas|1|Name|string|
-#button_baseline|Class Name|string|TextButton|Import Name|string|gui|X 
-#Fix|null|Y Fix|null|W Fix|null|H Fix|null|W Default|integer|1|H Defaul
-#t|integer|1|X Spec|string|102|Y Spec|string|10|W Spec|integer|88|H Spe
-#c|integer|23|X Align|string|l|Y Align|string|t|Is shaded|null|Is Butto
-#n Subclass|integer|1|Draw Border|null|Attribs|list|0|Tooltip|null|Acce
-#l|null|Event Handlers|list|1|list|2|string|BUTTON_RELEASE_EVENT|string
-#|on_button_baseline|Class Variable|integer|1|Parent Component|1|Label|
-#string|Baseline XER|No Keyboard|null|Img Up|null|Img Down|null|Img Wid
-#th|null|Img Height|null|Is Checked Flag|null|Is Checkbox Flag|null|Par
-#ent CheckBoxGroup|null|Parent Button Group|null|Internal Align|string|
-#c|class|CanvasTextButton|36|Parent Canvas|1|Name|string|button_export_
-#template|Class Name|string|TextButton|Import Name|string|gui|X Fix|nul
-#l|Y Fix|null|W Fix|null|H Fix|null|W Default|integer|1|H Default|integ
-#er|1|X Spec|string|100%-200|Y Spec|string|9|W Spec|integer|106|H Spec|
-#integer|23|X Align|string|l|Y Align|string|t|Is shaded|integer|1|Is Bu
-#tton Subclass|integer|1|Draw Border|null|Attribs|list|0|Tooltip|null|A
-#ccel|null|Event Handlers|list|1|list|2|string|BUTTON_RELEASE_EVENT|str
-#ing|on_button_export_template|Class Variable|integer|1|Parent Componen
-#t|1|Label|string|Export Template|No Keyboard|null|Img Up|null|Img Down
-#|null|Img Width|null|Img Height|null|Is Checked Flag|null|Is Checkbox 
-#Flag|null|Parent CheckBoxGroup|null|Parent Button Group|null|Internal 
-#Align|string|c|class|CanvasTextButton|36|Parent Canvas|1|Name|string|b
-#utton_import_template|Class Name|string|TextButton|Import Name|string|
-#gui|X Fix|null|Y Fix|null|W Fix|null|H Fix|null|W Default|integer|1|H 
-#Default|integer|1|X Spec|string|100%-200|Y Spec|string|38|W Spec|integ
-#er|106|H Spec|integer|23|X Align|string|l|Y Align|string|t|Is shaded|i
-#nteger|1|Is Button Subclass|integer|1|Draw Border|null|Attribs|list|0|
-#Tooltip|null|Accel|null|Event Handlers|list|1|list|2|string|BUTTON_REL
-#EASE_EVENT|string|on_button_import_template|Class Variable|integer|1|P
-#arent Component|1|Label|string|Import Template|No Keyboard|null|Img Up
-#|null|Img Down|null|Img Width|null|Img Height|null|Is Checked Flag|nul
-#l|Is Checkbox Flag|null|Parent CheckBoxGroup|null|Parent Button Group|
-#null|Internal Align|string|c|Initial Focus|null|Event Handlers|list|0|
+#e|string|table_column_betapost|Class Variable|integer|1|Label|string|B
+#eta Post|Column Width|integer|75|Internal Alignment|string|l|Auto widt
+#h flag|null|class|CanvasTableColumn|6|Name|string|table_column_mode_po
+#st|Class Variable|integer|1|Label|string|Mode Post|Column Width|intege
+#r|75|Internal Alignment|string|l|Auto width flag|null|class|CanvasText
+#Button|36|Parent Canvas|1|Name|string|text_button_export|Class Name|st
+#ring|TextButton|Import Name|string|gui|X Fix|null|Y Fix|null|W Fix|nul
+#l|H Fix|null|W Default|integer|1|H Default|integer|1|X Spec|string|100
+#%-97|Y Spec|string|366|W Spec|integer|88|H Spec|integer|23|X Align|str
+#ing|l|Y Align|string|t|Is shaded|integer|1|Is Button Subclass|integer|
+#1|Draw Border|null|Attribs|list|0|Tooltip|null|Accel|null|Event Handle
+#rs|list|1|list|2|string|BUTTON_RELEASE_EVENT|string|on_text_button_exp
+#ort|Class Variable|integer|1|Parent Component|1|Label|string|Export Ta
+#ble|No Keyboard|null|Img Up|null|Img Down|null|Img Width|null|Img Heig
+#ht|null|Is Checked Flag|null|Is Checkbox Flag|null|Parent CheckBoxGrou
+#p|null|Parent Button Group|null|Internal Align|string|c|class|CanvasLa
+#bel|27|Parent Canvas|1|Name|string|label_loaded_file|Class Name|string
+#|Label|Import Name|string|gui|X Fix|null|Y Fix|null|W Fix|null|H Fix|n
+#ull|W Default|null|H Default|integer|1|X Spec|integer|203|Y Spec|integ
+#er|18|W Spec|string|365|H Spec|integer|13|X Align|string|l|Y Align|str
+#ing|t|Is shaded|null|Is Button Subclass|null|Draw Border|null|Attribs|
+#list|0|Tooltip|null|Accel|null|Event Handlers|list|0|Class Variable|in
+#teger|1|Parent Component|1|Label|string||Internal Align|string|l|class
+#|CanvasTextList|29|Parent Canvas|1|Name|string|text_list_solutions|Cla
+#ss Name|string|TextList|Import Name|string|gui|X Fix|null|Y Fix|null|W
+# Fix|null|H Fix|null|W Default|null|H Default|null|X Spec|string|100%-
+#80|Y Spec|string|85|W Spec|string|71|H Spec|string|269|X Align|string|
+#l|Y Align|string|t|Is shaded|null|Is Button Subclass|null|Draw Border|
+#integer|1|Attribs|list|0|Tooltip|null|Accel|null|Event Handlers|list|1
+#|list|2|string|MOUSE_RELEASE_EVENT|string|on_text_list_solutions|Class
+# Variable|integer|1|Parent Component|1|Select One|integer|1|Select Man
+#y|null|Checked|list|1|null|Contents|list|1|string||class|CanvasLabel|2
+#7|Parent Canvas|1|Name|string|label_path|Class Name|string|Label|Impor
+#t Name|string|gui|X Fix|null|Y Fix|null|W Fix|null|H Fix|null|W Defaul
+#t|null|H Default|integer|1|X Spec|string|14|Y Spec|string|375|W Spec|s
+#tring|31|H Spec|integer|13|X Align|string|l|Y Align|string|t|Is shaded
+#|null|Is Button Subclass|null|Draw Border|null|Attribs|list|0|Tooltip|
+#null|Accel|null|Event Handlers|list|0|Class Variable|integer|1|Parent 
+#Component|1|Label|string|Path|Internal Align|string|l|class|CanvasLabe
+#l|27|Parent Canvas|1|Name|string|label_solution|Class Name|string|Labe
+#l|Import Name|string|gui|X Fix|null|Y Fix|null|W Fix|null|H Fix|null|W
+# Default|integer|1|H Default|integer|1|X Spec|string|100%-80|Y Spec|st
+#ring|66|W Spec|integer|54|H Spec|integer|13|X Align|string|l|Y Align|s
+#tring|t|Is shaded|null|Is Button Subclass|null|Draw Border|null|Attrib
+#s|list|0|Tooltip|null|Accel|null|Event Handlers|list|0|Class Variable|
+#integer|1|Parent Component|1|Label|string|Solutions|Internal Align|str
+#ing|l|class|CanvasTextButton|36|Parent Canvas|1|Name|string|text_butto
+#n_quit|Class Name|string|TextButton|Import Name|string|gui|X Fix|null|
+#Y Fix|null|W Fix|integer|1|H Fix|integer|1|W Default|null|H Default|nu
+#ll|X Spec|string|100%-80|Y Spec|string|9|W Spec|string|52|H Spec|strin
+#g|23|X Align|string|l|Y Align|string|t|Is shaded|null|Is Button Subcla
+#ss|integer|1|Draw Border|null|Attribs|list|0|Tooltip|null|Accel|null|E
+#vent Handlers|list|1|list|2|string|BUTTON_RELEASE_EVENT|string|on_text
+#_button_quit|Class Variable|integer|1|Parent Component|1|Label|string|
+#Quit|No Keyboard|null|Img Up|null|Img Down|null|Img Width|null|Img Hei
+#ght|null|Is Checked Flag|null|Is Checkbox Flag|null|Parent CheckBoxGro
+#up|null|Parent Button Group|null|Internal Align|string|c|class|CanvasT
+#extButton|36|Parent Canvas|1|Name|string|button_baseline|Class Name|st
+#ring|TextButton|Import Name|string|gui|X Fix|null|Y Fix|null|W Fix|nul
+#l|H Fix|null|W Default|integer|1|H Default|integer|1|X Spec|string|102
+#|Y Spec|string|10|W Spec|integer|88|H Spec|integer|23|X Align|string|l
+#|Y Align|string|t|Is shaded|null|Is Button Subclass|integer|1|Draw Bor
+#der|null|Attribs|list|0|Tooltip|null|Accel|null|Event Handlers|list|1|
+#list|2|string|BUTTON_RELEASE_EVENT|string|on_button_baseline|Class Var
+#iable|integer|1|Parent Component|1|Label|string|Baseline XER|No Keyboa
+#rd|null|Img Up|null|Img Down|null|Img Width|null|Img Height|null|Is Ch
+#ecked Flag|null|Is Checkbox Flag|null|Parent CheckBoxGroup|null|Parent
+# Button Group|null|Internal Align|string|c|class|CanvasTextButton|36|P
+#arent Canvas|1|Name|string|button_export_template|Class Name|string|Te
+#xtButton|Import Name|string|gui|X Fix|null|Y Fix|null|W Fix|null|H Fix
+#|null|W Default|integer|1|H Default|integer|1|X Spec|string|100%-200|Y
+# Spec|string|9|W Spec|integer|106|H Spec|integer|23|X Align|string|l|Y
+# Align|string|t|Is shaded|integer|1|Is Button Subclass|integer|1|Draw 
+#Border|null|Attribs|list|0|Tooltip|null|Accel|null|Event Handlers|list
+#|1|list|2|string|BUTTON_RELEASE_EVENT|string|on_button_export_template
+#|Class Variable|integer|1|Parent Component|1|Label|string|Export Templ
+#ate|No Keyboard|null|Img Up|null|Img Down|null|Img Width|null|Img Heig
+#ht|null|Is Checked Flag|null|Is Checkbox Flag|null|Parent CheckBoxGrou
+#p|null|Parent Button Group|null|Internal Align|string|c|class|CanvasTe
+#xtButton|36|Parent Canvas|1|Name|string|button_import_template|Class N
+#ame|string|TextButton|Import Name|string|gui|X Fix|null|Y Fix|null|W F
+#ix|null|H Fix|null|W Default|integer|1|H Default|integer|1|X Spec|stri
+#ng|100%-200|Y Spec|string|38|W Spec|integer|106|H Spec|integer|23|X Al
+#ign|string|l|Y Align|string|t|Is shaded|integer|1|Is Button Subclass|i
+#nteger|1|Draw Border|null|Attribs|list|0|Tooltip|null|Accel|null|Event
+# Handlers|list|1|list|2|string|BUTTON_RELEASE_EVENT|string|on_button_i
+#mport_template|Class Variable|integer|1|Parent Component|1|Label|strin
+#g|Import Template|No Keyboard|null|Img Up|null|Img Down|null|Img Width
+#|null|Img Height|null|Is Checked Flag|null|Is Checkbox Flag|null|Paren
+#t CheckBoxGroup|null|Parent Button Group|null|Internal Align|string|c|
+#Initial Focus|null|Event Handlers|list|0|

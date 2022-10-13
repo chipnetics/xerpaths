@@ -9,14 +9,20 @@ procedure getfilename()
     return f
 end
 
+# Data must be in format yyyy-mm-dd or yyyy/mm/dd
+# Function will strip off any excess (such as time)
 procedure days_add(curr_date,days)
-    return SecToDate(DateToSec(curr_date[1:11],-7)+86400*days,-7)
+    return SecToDate(DateToSec(replace(curr_date,"-","/")[1:11],-7)+86400*days,-7)
 end
 
+# Data must be in format yyyy-mm-dd or yyyy/mm/dd
+# Function will strip off any excess (such as time)
 procedure days_diff(ini_date,fin_date)
-    return (DateToSec(fin_date[1:11],-7)-DateToSec(ini_date[1:11],-7))/86400
+    return (DateToSec(replace(fin_date,"-","/")[1:11],-7)-DateToSec(replace(ini_date,"-","/")[1:11],-7))/86400
 end
 
+# Data must be in format yyyy-mm-dd or yyyy/mm/dd
+# Function will strip off any excess (such as time)
 procedure days_away(fin_date)
-    return (DateToSec(fin_date[1:11],-7)-DateToSec(&date,-7))/86400
+    return (DateToSec(replace(fin_date,"-","/")[1:11],-7)-DateToSec(&date,-7))/86400
 end
