@@ -92,7 +92,7 @@ class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, tabl
                every result_path := gen_path(g_tbl_tasks_code[sel_task_code].task_id) do {
                   idx:=1
 
-                  # initial prediction ratio is 1x multiplier
+                    # every task_id in the result_path
                     every task := !result_path do {
                      idx+:=1
 

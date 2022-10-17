@@ -64,12 +64,11 @@ procedure update_curr_structures(xer_filename)
 
 end
 
-
 procedure add_custom_list(txt_filename)
-
     local txt_file := open(txt_filename,"r") | stop("Cannot open TXT file for custom codes.")
     every put(txt_data := [],!txt_file)
 
+    # Generate a fake task_id and task_code for the first element in the custom list.
     fake_root_task_id := "CUSTOM_" || ?100000
     fake_root_task_code := "CUSTOM-" || ?100000
     
@@ -90,12 +89,15 @@ procedure add_custom_list(txt_filename)
                         curr_record.pert_mean,curr_record.prior_alpha,curr_record.prior_beta,
                         curr_record.evidence,curr_record.pace))
 
+    # Insert the association of the newly generated 'fake' task_id and task_code
     insert(g_tbl_tasks_id,fake_root_task_id,fake_root_task_code)
 
     #write("Root task_code: ",real_root_task_code,"\tRoot task_id: ",real_root_task_id)
     #write("Custom task_code: ",g_tbl_tasks_code[fake_root_task_code].task_code,"\tCustom task_id: ",g_tbl_tasks_code[fake_root_task_code].task_id)
 
+    index := 1
      every txt_line := !txt_data do {
+        index +:=1
         if *txt_line = 0 then next
 
         # Make fake relationship so that it's generated as a path-finding solution
@@ -104,9 +106,26 @@ procedure add_custom_list(txt_filename)
         fake_to_id := "CUSTOM_" || ?100000
 
         insert(g_tbl_tasks_id,fake_from_id,txt_line)
-
         put(g_arr_relations,r_relation("PR_FS",fake_from_id,fake_to_id))
         #write("Adding fake relation: ",fake_from_id," --> ",fake_to_id," ::: Created Map ",fake_from_id," --> ",txt_line)
+
+        # Update transition lags...
+        # This assumes that the user has organized their custom list such that each successive
+        # activity follows the previous one.
+        real_from_code := txt_line
+        real_to_code := txt_data[index]
+
+        if *real_to_code>0 then {
+            start_task_code := fake_from_id
+            end_task_code := fake_to_id
+            pred_target_end := g_tbl_tasks_code[real_from_code].target_finish
+            succ_target_start := g_tbl_tasks_code[real_to_code].target_start
+            pred_to_succ_lag :=  days_diff(pred_target_end,succ_target_start)
+            
+            insert(g_tbl_trans_lags,fake_from_id||fake_to_id,pred_to_succ_lag)  
+            #write("insert into g_tbl_trans_lags ",fake_from_id||fake_to_id," --> ",pred_to_succ_lag)
+        }
+
      }
      pull(g_arr_relations)  #remove extra trailing relation generated from loop. (a destination that doesn't exist)
 end
