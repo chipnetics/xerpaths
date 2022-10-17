@@ -19,7 +19,7 @@ link parse
 link utilz
 $endif
 
-class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, table_xer, text_field_activity_name, text_field_task_id, table_2, table_xer_results, text_button_export, table_column_1, table_column_2, label_loaded_file, text_list_1, label_path, label_solution, text_list_solutions, table_column_3, table_column_4, table_column_likely, table_column_opti, table_column_pess, table_column_alpha_post, table_column_alpha_prior, table_column_beta_post, table_column_beta_prior, table_column_duration, table_column_is_complated, table_column_pert_mean, table_column_evidence, table_column_pace, table_column_ef, table_column_es, table_column_lf, table_column_ls, table_column_alphapost, table_column_betapost, table_column_actualduration, table_column_predduration, table_column_mode_post, table_column_original_ml, table_column_actual_dur, table_column_orig_dur, table_column_pred_dur, table_column_30, table_column_31, text_button_4, text_button_quit, text_button_5, button_baseline, table_column_32, button_export_template, text_button_7, button_import_template, table_column_range_opti, table_column_range_pess, table_column_35, table_column_36, table_column_pred_lag)
+class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, table_xer, text_field_activity_name, text_field_task_id, table_2, table_xer_results, text_button_export, table_column_1, table_column_2, label_loaded_file, text_list_1, label_path, label_solution, text_list_solutions, table_column_3, table_column_4, table_column_likely, table_column_opti, table_column_pess, table_column_alpha_post, table_column_alpha_prior, table_column_beta_post, table_column_beta_prior, table_column_duration, table_column_is_complated, table_column_pert_mean, table_column_evidence, table_column_pace, table_column_ef, table_column_es, table_column_lf, table_column_ls, table_column_alphapost, table_column_betapost, table_column_actualduration, table_column_predduration, table_column_mode_post, table_column_original_ml, table_column_actual_dur, table_column_orig_dur, table_column_pred_dur, table_column_30, table_column_31, text_button_4, text_button_quit, text_button_5, button_baseline, table_column_32, button_export_template, text_button_7, button_import_template, table_column_range_opti, table_column_range_pess, table_column_35, table_column_36, table_column_pred_lag, text_button_custom_list)
    
    local filtered_results := []
    local result_sol_tbl := table(0)
@@ -41,7 +41,8 @@ class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, tabl
    method load_xer_into_table(filename)
       local xer_table_contents := []
       result_sol_tbl := table(0)
-      every keyval := key(g_tbl_tasks_code) do put(
+      every keyval := key(g_tbl_tasks_code) do{
+       put(
          xer_table_contents,
          [g_tbl_tasks_code[keyval].task_code,
          g_tbl_tasks_code[keyval].task_name,
@@ -54,6 +55,7 @@ class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, tabl
          frn(g_tbl_tasks_code[keyval].prior_alpha,0,2),
          frn(g_tbl_tasks_code[keyval].prior_beta,0,2),
          ])
+      }
       filtered_results := xer_table_contents
       table_xer.set_contents(xer_table_contents)
       text_list_solutions.set_contents([])
@@ -103,6 +105,7 @@ class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, tabl
                      delta_early_finish:=&null
 
                      kv := g_tbl_tasks_id[task]
+                     write("found ",task," kv ",kv)
                      evidence:=g_tbl_tasks_code[kv].evidence
                      pace:=g_tbl_tasks_code[kv].pace
                      opti:=g_tbl_tasks_code[kv].opti_duration
@@ -129,6 +132,7 @@ class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, tabl
                         late_finish_date := g_tbl_tasks_code[kv].actual_finish[1:11] 
                      }
                      else { 
+                        /ratio:=1
                         alpha_post:="" & beta_post:="" & mode_post:="" & pred_likely_dur := integer(g_tbl_tasks_code[kv].target_duration*ratio);
                         # Check if the ranging was done for this activity and carry the value, otherwise choose something random....
                         if \g_tbl_ranging_template & \g_tbl_ranging_template[g_tbl_tasks_code[kv].task_code] then {
@@ -167,6 +171,9 @@ class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, tabl
                       /delta_early_start := ""
                       /delta_early_finish := ""
                       /pred_to_succ_lag := ""
+                      /alpha_post := ""
+                      /beta_post := ""
+                      /mode_post := ""
 
                       put(results_list,[g_tbl_tasks_code[kv].task_code,
                                           g_tbl_tasks_code[kv].task_name,
@@ -270,7 +277,9 @@ class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, tabl
 
    # Callback when user clicks on Sol 1,2, etc... display the results table for that particular path.
    method on_text_list_solutions(ev)
-      every selection := !text_list_solutions.get_selections() do table_xer_results.set_contents(result_sol_tbl[selection])
+      selection := text_list_solutions.get_selections()[1]
+      write(fullimage(result_sol_tbl[selection]))
+      table_xer_results.set_contents(result_sol_tbl[selection])
       text_button_export.clear_is_shaded()
    end
 
@@ -318,6 +327,14 @@ class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, tabl
       if *a_file.file.contents==0 then return
       import_ranging_template(a_file.file.contents)
       template_imported := "yes" # what else to use when true/false off &null?
+   end
+
+   # Callback when user wants to upload a custom list of TASK-CODES
+   method on_text_button_custom_list(ev)
+      a_file := getfilename()
+      if *a_file.file.contents==0 then return
+      add_custom_list(a_file.file.contents)
+      load_xer_into_table("Custom List")
    end
 
    method setup()
@@ -534,7 +551,7 @@ class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, tabl
       text_button_export.set_internal_alignment("c")
       self.add(text_button_export)
       label_loaded_file := Label()
-      label_loaded_file.set_pos(203, 18)
+      label_loaded_file.set_pos(289, 18)
       label_loaded_file.set_size("365", )
       label_loaded_file.set_internal_alignment("l")
       label_loaded_file.set_label("")
@@ -589,6 +606,13 @@ class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, tabl
       button_import_template.set_label("Import Template")
       button_import_template.set_internal_alignment("c")
       self.add(button_import_template)
+      text_button_custom_list := TextButton()
+      text_button_custom_list.set_pos("199", "10")
+      text_button_custom_list.connect(self, "on_text_button_custom_list", BUTTON_RELEASE_EVENT)
+      text_button_custom_list.clear_toggles()
+      text_button_custom_list.set_label("Custom List")
+      text_button_custom_list.set_internal_alignment("c")
+      self.add(text_button_custom_list)
    end
 
    initially
@@ -611,7 +635,7 @@ end
 ### Ivib-v2 layout ##
 #class|Canvas|17|Name Table|table|integer|0|7|string|icon_button|intege
 #r|1|string|label|integer|5|string|table|integer|2|string|table_column|
-#integer|37|string|text_button|integer|7|string|text_field|integer|2|st
+#integer|37|string|text_button|integer|8|string|text_field|integer|2|st
 #ring|text_list|integer|1|SuperClass Name|string|Dialog|Import Name|str
 #ing|gui|Button Groups|class|ButtonGroupSet|2|Parent Canvas|1|Boxes|lis
 #t|0|Checkbox Groups|class|CheckBoxGroupSet|2|Parent Canvas|1|Boxes|lis
@@ -619,7 +643,7 @@ end
 #en Init Dialog|integer|1|Gen Initially|integer|1|Dialog Struct|class|C
 #Dialog|4|Min Width|null|Min Height|null|Ticker Rate|null|Attribs|list|
 #3|string|bg=light gray|string|label=XER Paths|string|resize=on|Name|st
-#ring|XERPath|Width|integer|1403|Height|integer|599|Items|list|16|class
+#ring|XERPath|Width|integer|1403|Height|integer|599|Items|list|17|class
 #|CanvasTextButton|36|Parent Canvas|1|Name|string|button_open_xer|Class
 # Name|string|TextButton|Import Name|string|gui|X Fix|null|Y Fix|null|W
 # Fix|null|H Fix|null|W Default|integer|1|H Default|integer|1|X Spec|st
@@ -772,7 +796,7 @@ end
 #p|null|Parent Button Group|null|Internal Align|string|c|class|CanvasLa
 #bel|27|Parent Canvas|1|Name|string|label_loaded_file|Class Name|string
 #|Label|Import Name|string|gui|X Fix|null|Y Fix|null|W Fix|null|H Fix|n
-#ull|W Default|null|H Default|integer|1|X Spec|integer|203|Y Spec|integ
+#ull|W Default|null|H Default|integer|1|X Spec|integer|289|Y Spec|integ
 #er|18|W Spec|string|365|H Spec|integer|13|X Align|string|l|Y Align|str
 #ing|t|Is shaded|null|Is Button Subclass|null|Draw Border|null|Attribs|
 #list|0|Tooltip|null|Accel|null|Event Handlers|list|0|Class Variable|in
@@ -844,4 +868,15 @@ end
 #g|Import Template|No Keyboard|null|Img Up|null|Img Down|null|Img Width
 #|null|Img Height|null|Is Checked Flag|null|Is Checkbox Flag|null|Paren
 #t CheckBoxGroup|null|Parent Button Group|null|Internal Align|string|c|
-#Initial Focus|null|Event Handlers|list|0|
+#class|CanvasTextButton|36|Parent Canvas|1|Name|string|text_button_cust
+#om_list|Class Name|string|TextButton|Import Name|string|gui|X Fix|null
+#|Y Fix|null|W Fix|null|H Fix|null|W Default|integer|1|H Default|intege
+#r|1|X Spec|string|199|Y Spec|string|10|W Spec|integer|82|H Spec|intege
+#r|23|X Align|string|l|Y Align|string|t|Is shaded|null|Is Button Subcla
+#ss|integer|1|Draw Border|null|Attribs|list|0|Tooltip|null|Accel|null|E
+#vent Handlers|list|1|list|2|string|BUTTON_RELEASE_EVENT|string|on_text
+#_button_custom_list|Class Variable|integer|1|Parent Component|1|Label|
+#string|Custom List|No Keyboard|null|Img Up|null|Img Down|null|Img Widt
+#h|null|Img Height|null|Is Checked Flag|null|Is Checkbox Flag|null|Pare
+#nt CheckBoxGroup|null|Parent Button Group|null|Internal Align|string|c
+#|Initial Focus|null|Event Handlers|list|0|

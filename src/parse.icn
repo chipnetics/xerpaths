@@ -64,6 +64,53 @@ procedure update_curr_structures(xer_filename)
 
 end
 
+
+procedure add_custom_list(txt_filename)
+
+    local txt_file := open(txt_filename,"r") | stop("Cannot open TXT file for custom codes.")
+    every put(txt_data := [],!txt_file)
+
+    fake_root_task_id := "CUSTOM_" || ?100000
+    fake_root_task_code := "CUSTOM-" || ?100000
+    
+    real_root_task_code := txt_data[1]
+    real_root_task_id := g_tbl_tasks_code[real_root_task_code].task_id
+    curr_record := g_tbl_tasks_code[real_root_task_code]
+
+    ## Insert custom task code into table
+    insert(g_tbl_tasks_code,fake_root_task_code,r_task(
+                        fake_root_task_id,fake_root_task_code,"User-Imported Custom Task List",
+                        "","","",  # Baseline start/finish/duration blank on initial load, unless user selects a baseline file.
+                        curr_record.target_start,curr_record.target_finish,
+                        curr_record.actual_start,curr_record.actual_finish,
+                        curr_record.early_start,curr_record.early_finish,
+                        curr_record.late_start,curr_record.late_finish,
+                        curr_record.is_completed,curr_record.actual_duration,
+                        curr_record.opti_duration,curr_record.target_duration,curr_record.pess_duration,
+                        curr_record.pert_mean,curr_record.prior_alpha,curr_record.prior_beta,
+                        curr_record.evidence,curr_record.pace))
+
+    insert(g_tbl_tasks_id,fake_root_task_id,fake_root_task_code)
+
+    #write("Root task_code: ",real_root_task_code,"\tRoot task_id: ",real_root_task_id)
+    #write("Custom task_code: ",g_tbl_tasks_code[fake_root_task_code].task_code,"\tCustom task_id: ",g_tbl_tasks_code[fake_root_task_code].task_id)
+
+     every txt_line := !txt_data do {
+        if *txt_line = 0 then next
+
+        # Make fake relationship so that it's generated as a path-finding solution
+        \fake_from_id := fake_to_id
+        /fake_from_id := fake_root_task_id # On initial pass, if null, the first "from" is the actual task_id of the task_code
+        fake_to_id := "CUSTOM_" || ?100000
+
+        insert(g_tbl_tasks_id,fake_from_id,txt_line)
+
+        put(g_arr_relations,r_relation("PR_FS",fake_from_id,fake_to_id))
+        #write("Adding fake relation: ",fake_from_id," --> ",fake_to_id," ::: Created Map ",fake_from_id," --> ",txt_line)
+     }
+     pull(g_arr_relations)  #remove extra trailing relation generated from loop. (a destination that doesn't exist)
+end
+
 procedure load_structures(xer_filename)
     local xer_file := open(xer_filename,"r") | stop("Cannot open XER file.")
     every put(xer_data := [],!xer_file)

@@ -12,6 +12,7 @@ end
 # Data must be in format yyyy-mm-dd or yyyy/mm/dd
 # Function will strip off any excess (such as time)
 procedure days_add(curr_date,days)
+    /days := 0
     return SecToDate(DateToSec(replace(curr_date,"-","/")[1:11],-7)+86400*days,-7)
 end
 
