@@ -28,8 +28,8 @@ class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, tabl
 
    method component_setup()
       self.setup()
-      load_structures("DD20220529.xer")
-      load_xer_into_table("DD20220529.xer")
+      #load_structures("DD20220529.xer")
+      #load_xer_into_table("DD20220529.xer")
    end
 
    method end_dialog()
@@ -60,7 +60,7 @@ class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, tabl
       table_xer.set_contents(xer_table_contents)
       text_list_solutions.set_contents([])
       table_xer_results.set_contents([])
-      label_loaded_file.set_label("Loaded: "||filename)
+      if \filename then label_loaded_file.set_label("Loaded: "||filename)
       button_export_template.clear_is_shaded() # Make button active.
       button_import_template.clear_is_shaded() # Make button active.
       text_button_export.set_is_shaded() # Make button in-active.
@@ -213,6 +213,7 @@ class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, tabl
    # Callback filter the schedule by task_name based on typed text in input field (using regex)
    method on_text_field_activity_name(ev)
       re_content := text_field_activity_name.get_contents()
+      if *re_content = 0 then return
       filtered_results := []
       every keyval := key(g_tbl_tasks_code) do {
          if g_tbl_tasks_code[keyval].task_name ? ReFind(re_content) then 
@@ -236,6 +237,7 @@ class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, tabl
    # Callback filter the schedule by task_id based on typed text in input field (using regex)
    method on_text_field_task_id(ev)
       re_content := text_field_task_id.get_contents()
+      if *re_content = 0 then return
       filtered_results := []
       every keyval := key(g_tbl_tasks_code) do {
          if g_tbl_tasks_code[keyval].task_code ? ReFind(re_content) then 
@@ -334,7 +336,10 @@ class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, tabl
       a_file := getfilename()
       if *a_file.file.contents==0 then return
       add_custom_list(a_file.file.contents)
-      load_xer_into_table("Custom List")
+      load_xer_into_table()
+      # Apply filters if any
+      on_text_field_task_id()
+      on_text_field_activity_name()
    end
 
    method setup()
@@ -577,7 +582,7 @@ class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, tabl
       self.add(label_solution)
       text_button_quit := TextButton()
       text_button_quit.set_pos("100%-80", "9")
-      text_button_quit.set_size("52", "23")
+      text_button_quit.set_size("71", "23")
       text_button_quit.connect(self, "on_text_button_quit", BUTTON_RELEASE_EVENT)
       text_button_quit.clear_toggles()
       text_button_quit.set_label("Quit")
@@ -827,7 +832,7 @@ end
 #ing|l|class|CanvasTextButton|36|Parent Canvas|1|Name|string|text_butto
 #n_quit|Class Name|string|TextButton|Import Name|string|gui|X Fix|null|
 #Y Fix|null|W Fix|integer|1|H Fix|integer|1|W Default|null|H Default|nu
-#ll|X Spec|string|100%-80|Y Spec|string|9|W Spec|string|52|H Spec|strin
+#ll|X Spec|string|100%-80|Y Spec|string|9|W Spec|string|71|H Spec|strin
 #g|23|X Align|string|l|Y Align|string|t|Is shaded|null|Is Button Subcla
 #ss|integer|1|Draw Border|null|Attribs|list|0|Tooltip|null|Accel|null|E
 #vent Handlers|list|1|list|2|string|BUTTON_RELEASE_EVENT|string|on_text
