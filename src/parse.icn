@@ -23,7 +23,9 @@ global g_arr_relations
 global g_tbl_tasks_code
 global g_tbl_tasks_id
 global g_tbl_ranging_template
-global g_tbl_trans_lags         # table for lag from pred to succ (key is predsucc concatenated)
+global g_tbl_trans_early_lags     # table for lag from pred to succ (key is predsucc concatenated)
+global g_tbl_trans_target_lags     # table for lag from pred to succ (key is predsucc concatenated)
+global g_tbl_trans_late_lags      # table for lag from pred to succ (key is predsucc concatenated)
 
 # procedure to load the ranging template
 procedure import_ranging_template(ranging_filename)
@@ -118,12 +120,17 @@ procedure add_custom_list(txt_filename)
         if *real_to_code>0 then {
             start_task_code := fake_from_id
             end_task_code := fake_to_id
+
+            pred_early_end := g_tbl_tasks_code[real_from_code].early_finish
+            succ_early_start := g_tbl_tasks_code[real_to_code].early_start
             pred_target_end := g_tbl_tasks_code[real_from_code].target_finish
             succ_target_start := g_tbl_tasks_code[real_to_code].target_start
-            pred_to_succ_lag :=  days_diff(pred_target_end,succ_target_start)
+            pred_late_end := g_tbl_tasks_code[real_from_code].late_finish
+            succ_late_start := g_tbl_tasks_code[real_to_code].late_start
             
-            insert(g_tbl_trans_lags,fake_from_id||fake_to_id,pred_to_succ_lag)  
-            #write("insert into g_tbl_trans_lags ",fake_from_id||fake_to_id," --> ",pred_to_succ_lag)
+            insert(g_tbl_trans_early_lags,fake_from_id||fake_to_id,days_diff(pred_early_end,succ_early_start)) 
+            insert(g_tbl_trans_target_lags,fake_from_id||fake_to_id,days_diff(pred_target_end,succ_target_start))   
+            insert(g_tbl_trans_late_lags,fake_from_id||fake_to_id,days_diff(pred_late_end,succ_late_start)) 
         }
 
      }
@@ -154,6 +161,9 @@ procedure load_structures(xer_filename)
                 
                 # Check if 100% complete, if so use actual dates o.w. use target dates.
                 if fields[6]==100 then iscmpl:="Y" & act_duration:=days_diff(fields[29],fields[30])  else iscmpl:="" & act_duration:=""
+
+                # Check if started but not completed
+                if *fields[29]>0 & fields[30]=="" then iscmpl:="IP" & act_duration:="-IP-"
                 
                 target_duration := days_diff(fields[38],fields[39]) # target duration -> likely duration.
                 
@@ -180,14 +190,23 @@ procedure load_structures(xer_filename)
     }
 
     ## Calculate the lags between target_end_date of predecessor & target_start_date of successor.
-    g_tbl_trans_lags := table(0)
+    g_tbl_trans_early_lags := table(0)
+    g_tbl_trans_target_lags := table(0)
+    g_tbl_trans_late_lags := table(0)
     every elem := !g_arr_relations do {
         start_task_code := g_tbl_tasks_id[elem.start_id]
         end_task_code := g_tbl_tasks_id[elem.end_id]
+
+        pred_early_end := g_tbl_tasks_code[start_task_code].early_finish
+        succ_early_start := g_tbl_tasks_code[end_task_code].early_start
         pred_target_end := g_tbl_tasks_code[start_task_code].target_finish
         succ_target_start := g_tbl_tasks_code[end_task_code].target_start
-        pred_to_succ_lag :=  days_diff(pred_target_end,succ_target_start)
-        insert(g_tbl_trans_lags,elem.start_id||elem.end_id,pred_to_succ_lag)  # key is concat of pred and succ task IDs.
+        pred_late_end := g_tbl_tasks_code[start_task_code].late_finish
+        succ_late_start := g_tbl_tasks_code[end_task_code].late_start
+
+        insert(g_tbl_trans_early_lags,elem.start_id||elem.end_id,days_diff(pred_early_end,succ_early_start))
+        insert(g_tbl_trans_target_lags,elem.start_id||elem.end_id,days_diff(pred_target_end,succ_target_start))
+        insert(g_tbl_trans_late_lags,elem.start_id||elem.end_id,days_diff(pred_late_end,succ_late_start)) 
         #write(elem.start_id,"\t",elem.end_id,"\t",pred_target_end,"\t",succ_target_start,"\t",elem.pred_succ_lag)
     }
 end
