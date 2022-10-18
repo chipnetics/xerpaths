@@ -16,3 +16,4 @@ src/pathgui_dbg
 src/ubugger
 src/customlist.txt
 src/*_template.txt
+src/*_prediction_results.txt

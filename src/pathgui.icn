@@ -310,7 +310,7 @@ class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, tabl
       fout:=open(replace(&date,"/",".") || "_prediction_results.txt","w") | write("Could not open file for writing")
       
       str_build := ""
-      write(fout,"task_id\ttask_name\tbase_dur_days\tcurr_dur_days\tact_dur_days\trng_opti\trng_pess\tpred_opti\tpred_likely\tpred_pess\tpred_lag\tpred_es\tdelta_es\tpred_ef\tdelta_ef\tpred_ls\tdelta_ls\tpred_lf\tdelta_lf\tevidence\tpace\talpha_post\tbeta_post\tmode_post")
+      write(fout,"task_id\ttask_name\tbase_dur_days\tcurr_dur_days\tact_dur_days\trng_opti\trng_pess\tpred_opti\tpred_likely\tpred_pess\tpred_lag\tpred_es\tdelta_es\tpred_ef\tdelta_ef\tpred_ts\tdelta_ts\tpred_tf\tdelta_tf\tpred_ls\tdelta_ls\tpred_lf\tdelta_lf\tevidence\tpace\talpha_post\tbeta_post\tmode_post")
       every result := !result_sol_tbl[sol_number] do {
          every elem := !result do {
             str_build ||:= elem || "\t"
