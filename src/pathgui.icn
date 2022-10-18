@@ -93,7 +93,11 @@ class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, tabl
                every result_path := gen_path(g_tbl_tasks_code[sel_task_code].task_id) do {
                   idx:=1
 
-                    # every task_id in the result_path
+                  cum_early_delta := 0
+                  cum_target_delta := 0
+                  cum_late_delta := 0
+
+                  # every task_id in the result_path
                     every task := !result_path do {
                      idx+:=1
 
@@ -161,29 +165,63 @@ class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, tabl
                         pred_to_succ_target_lag := g_tbl_trans_target_lags[result_path[idx-2]||task] 
                         pred_to_succ_late_lag := g_tbl_trans_late_lags[result_path[idx-2]||task] 
 
+                     #    ############# EARLY DATE CALCULATIONS
+                     #    # The early start date on this loop is the last loops early finish date
+                     #    early_start_date := if /early_finish_date then g_tbl_tasks_code[kv].early_start else early_finish_date
+                     #    early_start_date := days_add(early_start_date,pred_to_succ_early_lag)  # Add in the lag between current pred finish and succ start.
+                     #    # However if there is an actual start date, then this should be the new early_start_date
+                     #    if *g_tbl_tasks_code[kv].actual_start>0 then early_start_date:= g_tbl_tasks_code[kv].actual_start
+                     #    early_finish_date := days_add(early_start_date,pred_likely_dur*opti_factor) #Original risk ranging shoudl be carried here
+                     #    ############# END EARLY DATE CALCULATIONS
+                       
+                     #   ############# TARGET DATE CALCULATIONS
+                     #    # The early start date on this loop is the last loops target finish date
+                     #    target_start_date := if /target_finish_date then g_tbl_tasks_code[kv].target_start else target_finish_date
+                     #    target_start_date := days_add(target_start_date,pred_to_succ_target_lag)  # Add in the lag between current pred finish and succ start.
+                     #    # However if there is an actual start date, then this should be the new target_start_date
+                     #    if *g_tbl_tasks_code[kv].actual_start>0 then target_start_date:= g_tbl_tasks_code[kv].actual_start
+                     #    target_finish_date := days_add(target_start_date,pred_likely_dur) #Original risk ranging shoudl be car
+                     #    ############# END TARGET DATE CALCULATIONS
+
+
+                     #    ############# LATE DATE CALCULATIONS
+                     #    late_start_date := if /late_finish_date then g_tbl_tasks_code[kv].late_start else late_finish_date# Any float should get added here.
+                     #    late_start_date := days_add(late_start_date,pred_to_succ_late_lag)  # Add in the lag between current pred finish and succ start.
+                     #    late_finish_date := days_add(late_start_date,pred_likely_dur*pess_factor) #Original risk ranging shoudl be carried here
+                     #    ############# END LATE DATE CALCULATIONS
+
                         ############# EARLY DATE CALCULATIONS
-                        # The early start date on this loop is the last loops early finish date
-                        early_start_date := if /early_finish_date then g_tbl_tasks_code[kv].early_start else early_finish_date
-                        early_start_date := days_add(early_start_date,pred_to_succ_early_lag)  # Add in the lag between current pred finish and succ start.
-                        # However if there is an actual start date, then this should be the new early_start_date
-                        if *g_tbl_tasks_code[kv].actual_start>0 then early_start_date:= g_tbl_tasks_code[kv].actual_start
-                        early_finish_date := days_add(early_start_date,pred_likely_dur*opti_factor) #Original risk ranging shoudl be carried here
+                        cum_early_delta +:= pred_likely_dur*opti_factor - g_tbl_tasks_code[kv].target_duration
+                        early_start_date := g_tbl_tasks_code[kv].early_start
+                         if *g_tbl_tasks_code[kv].actual_start>0 then {
+                           early_start_date:= g_tbl_tasks_code[kv].actual_start
+
+                         }
+                        early_start_date := days_add(early_start_date,cum_early_delta) 
+                        early_finish_date := days_add(early_start_date,pred_likely_dur*opti_factor) 
                         ############# END EARLY DATE CALCULATIONS
                        
                        ############# TARGET DATE CALCULATIONS
-                        # The early start date on this loop is the last loops target finish date
-                        target_start_date := if /target_finish_date then g_tbl_tasks_code[kv].target_start else target_finish_date
-                        target_start_date := days_add(target_start_date,pred_to_succ_target_lag)  # Add in the lag between current pred finish and succ start.
-                        # However if there is an actual start date, then this should be the new target_start_date
-                        if *g_tbl_tasks_code[kv].actual_start>0 then target_start_date:= g_tbl_tasks_code[kv].actual_start
-                        target_finish_date := days_add(target_start_date,pred_likely_dur) #Original risk ranging shoudl be car
-                        ############# END TARGET DATE CALCULATIONS
+                        cum_target_delta +:= pred_likely_dur - g_tbl_tasks_code[kv].target_duration
+                        target_start_date := g_tbl_tasks_code[kv].target_start
+                         if *g_tbl_tasks_code[kv].actual_start>0 then {
+                           target_start_date:= g_tbl_tasks_code[kv].actual_start
+
+                         }
+                        target_start_date := days_add(target_start_date,cum_target_delta) 
+                        target_finish_date := days_add(target_start_date,pred_likely_dur) 
+                        ############# END TAREGET DATE CALCULATIONS
 
 
                         ############# LATE DATE CALCULATIONS
-                        late_start_date := if /late_finish_date then g_tbl_tasks_code[kv].late_start else late_finish_date# Any float should get added here.
-                        late_start_date := days_add(late_start_date,pred_to_succ_late_lag)  # Add in the lag between current pred finish and succ start.
-                        late_finish_date := days_add(late_start_date,pred_likely_dur*pess_factor) #Original risk ranging shoudl be carried here
+                        cum_late_delta +:= pred_likely_dur*pess_factor - g_tbl_tasks_code[kv].target_duration
+                        late_start_date := g_tbl_tasks_code[kv].late_start
+                         if *g_tbl_tasks_code[kv].actual_start>0 then {
+                           late_start_date:= g_tbl_tasks_code[kv].actual_start
+
+                         }
+                        late_start_date := days_add(late_start_date,cum_late_delta) 
+                        late_finish_date := days_add(late_start_date,pred_likely_dur*pess_factor) 
                         ############# END LATE DATE CALCULATIONS
 
                         # Delta of the prediction model vs the current schedule

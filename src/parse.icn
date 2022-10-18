@@ -70,37 +70,47 @@ procedure add_custom_list(txt_filename)
     local txt_file := open(txt_filename,"r") | stop("Cannot open TXT file for custom codes.")
     every put(txt_data := [],!txt_file)
 
-    # Generate a fake task_id and task_code for the first element in the custom list.
-    fake_root_task_id := "CUSTOM_" || ?100000
-    fake_root_task_code := "CUSTOM-" || ?100000
-    
-    real_root_task_code := txt_data[1]
-    real_root_task_id := g_tbl_tasks_code[real_root_task_code].task_id
-    curr_record := g_tbl_tasks_code[real_root_task_code]
-
-    ## Insert custom task code into table
-    insert(g_tbl_tasks_code,fake_root_task_code,r_task(
-                        fake_root_task_id,fake_root_task_code,"User-Imported Custom Task List",
-                        "","","",  # Baseline start/finish/duration blank on initial load, unless user selects a baseline file.
-                        curr_record.target_start,curr_record.target_finish,
-                        curr_record.actual_start,curr_record.actual_finish,
-                        curr_record.early_start,curr_record.early_finish,
-                        curr_record.late_start,curr_record.late_finish,
-                        curr_record.is_completed,curr_record.actual_duration,
-                        curr_record.opti_duration,curr_record.target_duration,curr_record.pess_duration,
-                        curr_record.pert_mean,curr_record.prior_alpha,curr_record.prior_beta,
-                        curr_record.evidence,curr_record.pace))
-
-    # Insert the association of the newly generated 'fake' task_id and task_code
-    insert(g_tbl_tasks_id,fake_root_task_id,fake_root_task_code)
-
-    #write("Root task_code: ",real_root_task_code,"\tRoot task_id: ",real_root_task_id)
-    #write("Custom task_code: ",g_tbl_tasks_code[fake_root_task_code].task_code,"\tCustom task_id: ",g_tbl_tasks_code[fake_root_task_code].task_id)
+    clean_txt_data := []
+    # Remove empty lines and comments from users custom list
+    every txt_line := !txt_data do {
+        if *txt_line = 0 | txt_line[1]=="#" then next
+        put(clean_txt_data,txt_line)
+    }
 
     index := 1
-     every txt_line := !txt_data do {
+     every txt_line := !clean_txt_data do {
         index +:=1
-        if *txt_line = 0 then next
+
+        if /first_valid_entry then {
+                # Generate a fake task_id and task_code for the first element in the custom list.
+                fake_root_task_id := "CUSTOM_" || ?100000
+                fake_root_task_code := "CUSTOM-" || ?100000
+                
+                real_root_task_code := clean_txt_data[index]
+                real_root_task_id := g_tbl_tasks_code[real_root_task_code].task_id
+                curr_record := g_tbl_tasks_code[real_root_task_code]
+
+                ## Insert custom task code into table
+                insert(g_tbl_tasks_code,fake_root_task_code,r_task(
+                                    fake_root_task_id,fake_root_task_code,"User-Imported Custom Task List",
+                                    "","","",  # Baseline start/finish/duration blank on initial load, unless user selects a baseline file.
+                                    curr_record.target_start,curr_record.target_finish,
+                                    curr_record.actual_start,curr_record.actual_finish,
+                                    curr_record.early_start,curr_record.early_finish,
+                                    curr_record.late_start,curr_record.late_finish,
+                                    curr_record.is_completed,curr_record.actual_duration,
+                                    curr_record.opti_duration,curr_record.target_duration,curr_record.pess_duration,
+                                    curr_record.pert_mean,curr_record.prior_alpha,curr_record.prior_beta,
+                                    curr_record.evidence,curr_record.pace))
+
+                # Insert the association of the newly generated 'fake' task_id and task_code
+                insert(g_tbl_tasks_id,fake_root_task_id,fake_root_task_code)
+
+                /first_valid_entry := 1
+
+                #write("Root task_code: ",real_root_task_code,"\tRoot task_id: ",real_root_task_id)
+                #write("Custom task_code: ",g_tbl_tasks_code[fake_root_task_code].task_code,"\tCustom task_id: ",g_tbl_tasks_code[fake_root_task_code].task_id)
+        }
 
         # Make fake relationship so that it's generated as a path-finding solution
         \fake_from_id := fake_to_id
@@ -115,7 +125,7 @@ procedure add_custom_list(txt_filename)
         # This assumes that the user has organized their custom list such that each successive
         # activity follows the previous one.
         real_from_code := txt_line
-        real_to_code := txt_data[index]
+        real_to_code := clean_txt_data[index]
 
         if *real_to_code>0 then {
             start_task_code := fake_from_id
