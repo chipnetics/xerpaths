@@ -6,6 +6,7 @@ link tuple
 record r_relation(rel_type,start_id,end_id)
 record r_task(task_id,task_code,task_name,
                 base_start,base_finish,base_duration,
+                bench_start,bench_finish,bench_duration,
                 target_start,target_finish,
                 actual_start,actual_finish,
                 early_start,early_finish,
@@ -25,7 +26,7 @@ global g_tbl_tasks_id
 global g_tbl_ranging_template
 global g_tbl_trans_early_lags     # table for lag from pred to succ (key is predsucc concatenated)
 global g_tbl_trans_target_lags     # table for lag from pred to succ (key is predsucc concatenated)
-global g_tbl_trans_late_lags      # table for lag from pred to succ (key is predsucc concatenated)
+global g_tbl_trans_late_lags      # table for lag from pred to succ (key is predsucc concatenated)global 
 
 # procedure to load the ranging template
 procedure import_ranging_template(ranging_filename)
@@ -37,6 +38,32 @@ procedure import_ranging_template(ranging_filename)
         fields := fieldlist(ranging_line,"\t")
         insert(g_tbl_ranging_template,fields[1],r_ranging_template(fields[1],fields[3],fields[4],fields[5]))
     }
+end
+
+procedure load_benchmark(xer_filename)
+
+    local xer_file := open(xer_filename,"r") | stop("Cannot open XER file to set as baseline.")
+    every put(xer_data := [],!xer_file)
+
+    index := 1
+    every xer_line := !xer_data do {
+        
+        if xer_line == "%T\tTASK" then {
+            every i:=index+2 to *xer_data do {
+                if find("%T",xer_data[i])==1 then break
+                fields := fieldlist(xer_data[i],"\t")
+                
+                # Store the actual duration into the benchmark
+                 if \g_tbl_tasks_code[fields[15]] then{
+                    g_tbl_tasks_code[fields[15]].bench_start := fields[29]
+                    g_tbl_tasks_code[fields[15]].bench_finish := fields[30]
+                    g_tbl_tasks_code[fields[15]].bench_duration := days_diff(fields[29],fields[30])
+                }       
+            }
+        }   
+        index +:= 1
+    }
+
 end
 
 # procedure to update the target duration in the structures with the original baseline duration
@@ -185,6 +212,7 @@ procedure load_structures(xer_filename)
                 # Put the struct into the table, with task_name as key.
                 insert(g_tbl_tasks_code,fields[15],r_task(fields[2],fields[15],fields[16],
                         "","","",  # Baseline start/finish/duration blank on initial load, unless user selects a baseline file.
+                        "","","",
                         fields[38],fields[39],
                         fields[29],fields[30],
                         fields[34],fields[35],

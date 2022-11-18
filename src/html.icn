@@ -1,0 +1,130 @@
+procedure create_dataset(aMap)
+
+    s := "var groups = new vis.DataSet([\n"
+    i := 0
+
+    every keyval := key(aMap) do {
+        s ||:= "{id: " || i || ", content: 'Solution #" || i || "', value: " || i || "},\n"
+        i +:= 1
+    }
+
+    s ||:= "]);\n\n"
+
+    id_id := 0
+    group_id := 0
+    s ||:= "var items = new vis.DataSet([\n"
+    every keyval := key(aMap) do {
+        aList := aMap[keyval]
+
+        every elem := !aList do {
+
+            # Determine the status of the task.
+            status:= if *elem[9] = 0 then "complete" else if elem[9] > elem[4] then "behind" else "ahead"
+            if *elem[4]>0 & elem[4] =0 then status := "milestone"
+
+            type_shape := if *elem[4]>0 & elem[4] =0 then "point" else "range"
+
+            d := "{id: " || id_id || ", group: " || group_id || ", " ||
+                        "content: '" || elem[1] || "', " ||
+                        "start: new Date(" || replace(elem[16],"-",",") || "), " ||
+                        "end: new Date(" || replace(elem[18],"-",",") || "), " ||
+                        "title: '<b>" || elem[2] || "</b><br><u>Target Start:</u> " || elem[16] || "<br><u>Target Finish:</u> " || elem[18] || "', " ||
+                        "className: '" || status || "'," ||
+                        "type: '" || type_shape || "'" ||
+                        "},\n"
+            s ||:= d
+            id_id +:= 1
+        }
+        group_id +:= 1
+    }
+    s ||:= "]);"
+   # write(s)
+    return s
+end
+
+
+procedure write_html(data_set)
+
+    fout:=open(replace(&date,"/",".") || "_visuals.html","w") | write("Could not open file for writing")
+
+      write(fout,"\n_
+<!DOCTYPE HTML>\n_
+<html>\n_
+<head>\n_
+  <title>XERscry Results</title>\n_
+\n_
+  <style>\n_
+    body, html {\n_
+      font-family: arial, sans-serif;\n_
+      font-size: 11pt;\n_
+    }\n_
+\n_
+    #visualization {\n_
+      box-sizing: border-box;\n_
+      width: 100%;\n_
+      height: 300px;\n_
+    }\n_
+  </style>\n_
+\n_
+  <script src=\"vis-timeline-graph2d.min.js\"></script>\n_
+  <link href=\"vis-timeline-graph2d.min.css\" rel=\"stylesheet\" type=\"text/css\" />\n_
+  \n_
+  <style type=\"text/css\">\n_
+    body, html {\n_
+      font-family: sans-serif;\n_
+    }\n_
+\n_
+    .vis-item .vis-item-overflow {\n_
+      overflow: visible;\n_
+    }\n_
+    .vis-item.complete  { background-color: #8ac2a8; }\n_
+    .vis-item.ahead  { background-color: #69b5d3; }\n_
+    .vis-item.behind  { background-color: #d6b4b4; }\n_
+    .vis-item.milestone  { background-color: #ece0a9; }\n_
+  </style>\n_
+</head>\n_
+<body>\n_
+<p>\n_
+  Results from XERscry.\n_
+</p>\n_
+<div id=\"visualization\"></div>\n_
+\n_
+<script>\n_
+\n",data_set,"_
+\n_
+\n_
+  // create visualization\n_
+  var container = document.getElementById('visualization');\n_
+  var options = {\n_
+    // option groupOrder can be a property name or a sort function\n_
+    // the sort function must compare two groups and return a value\n_
+    //     > 0 when a > b\n_
+    //     < 0 when a < b\n_
+    //       0 when a == b\n_
+    groupOrder: function (a, b) {\n_
+      return a.value - b.value;\n_
+    },\n_
+    order: function (a, b) {\n_
+    if (a.start < b.start)\n_
+        return 1;\n_
+    return -1;\n_
+},\n_
+    editable: true\n_
+  };\n_
+\n_
+  var timeline = new vis.Timeline(container);\n_
+  timeline.setOptions(options);\n_
+  timeline.setGroups(groups);\n_
+  timeline.setItems(items);\n_
+\n_
+</script>\n_
+</body>\n_
+</html>\n_
+"
+)
+
+      close(fout)
+
+
+
+end
