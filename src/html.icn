@@ -19,16 +19,16 @@ procedure create_dataset(aMap)
         every elem := !aList do {
 
             # Determine the status of the task.
-            status:= if *elem[9] = 0 then "complete" else if elem[9] > elem[4] then "behind" else "ahead"
-            if *elem[4]>0 & elem[4] =0 then status := "milestone"
+            status:= if *elem[10] = 0 then "complete" else if elem[10] > elem[5] then "behind" else "ahead"
+            if *elem[5]>0 & elem[5] =0 then status := "milestone"
 
-            type_shape := if *elem[4]>0 & elem[4] =0 then "point" else "range"
+            type_shape := if *elem[5]>0 & elem[5] =0 then "point" else "range"
 
             d := "{id: " || id_id || ", group: " || group_id || ", " ||
                         "content: '" || elem[1] || "', " ||
-                        "start: new Date(" || replace(elem[16],"-",",") || "), " ||
-                        "end: new Date(" || replace(elem[18],"-",",") || "), " ||
-                        "title: '<b>" || elem[2] || "</b><br><u>Target Start:</u> " || elem[16] || "<br><u>Target Finish:</u> " || elem[18] || "', " ||
+                        "start: new Date(" || replace(elem[17],"-",",") || "), " ||
+                        "end: new Date(" || replace(elem[19],"-",",") || "), " ||
+                        "title: '<b>" || elem[2] || "</b><br><u>Target Start:</u> " || elem[17] || "<br><u>Target Finish:</u> " || elem[19] || "', " ||
                         "className: '" || status || "'," ||
                         "type: '" || type_shape || "'" ||
                         "},\n"
