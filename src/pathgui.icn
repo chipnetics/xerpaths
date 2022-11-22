@@ -31,8 +31,8 @@ class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, tabl
 
    method component_setup()
       self.setup()
-      load_structures("DD20220529.xer")
-      load_xer_into_table("DD20220529.xer")
+      #load_structures("DD20220529.xer")
+      #load_xer_into_table("DD20220529.xer")
    end
 
    method end_dialog()
