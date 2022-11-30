@@ -2,10 +2,14 @@ procedure create_dataset(aMap)
 
     s := "var groups = new vis.DataSet([\n"
     i := 0
+    j := 1
 
     every keyval := key(aMap) do {
-        s ||:= "{id: " || i || ", content: 'Solution #" || i || "', value: " || i || "},\n"
+        s ||:= "{id: " || i || ", content: 'Path #" || j || ||"<br>(Current Schedule)"|| "', value: " || i || ",className: 'baseline'},\n"
         i +:= 1
+        s ||:= "{id: " || i || ", content: 'Prediction Model<br>(for above path)" || "', value: " || i || "},\n"
+        i +:= 1
+        j +:= 1
     }
 
     s ||:= "]);\n\n"
@@ -24,18 +28,34 @@ procedure create_dataset(aMap)
 
             type_shape := if *elem[5]>0 & elem[5] =0 then "point" else "range"
 
+            
             d := "{id: " || id_id || ", group: " || group_id || ", " ||
                         "content: '" || elem[1] || "', " ||
                         "start: new Date(" || replace(elem[17],"-",",") || "), " ||
-                        "end: new Date(" || replace(elem[19],"-",",") || "), " ||
-                        "title: '<b>" || elem[2] || "</b><br><u>Target Start:</u> " || elem[17] || "<br><u>Target Finish:</u> " || elem[19] || "', " ||
+                        "end: new Date(" || replace(elem[20],"-",",") || "), " ||
+                        "title: '<b>" || elem[2] || "</b><br><u>Current Start:</u> " || elem[17] || "<br><u>Current Finish:</u> " || elem[20] || "', " ||
+                        "className: '" || status || "'," ||
+                        "type: '" || type_shape || "'" ||
+                        "},\n"
+
+            s ||:= d
+            id_id +:= 1
+
+            delta_str:= if *elem[10] = 0 then "" else " [" || elem[19] || "," || elem[22] || "]" 
+
+            d := "{id: " || id_id || ", group: " || group_id+1 || ", " ||
+                        "content: '" || elem[1] || delta_str || "', " ||
+                        "start: new Date(" || replace(elem[18],"-",",") || "), " ||
+                        "end: new Date(" || replace(elem[21],"-",",") || "), " ||
+                        "title: '<b>" || elem[2] || "</b><br><u>Target Start:</u> " || elem[18] || "<br><u>Target Finish:</u> " || elem[21] || "', " ||
                         "className: '" || status || "'," ||
                         "type: '" || type_shape || "'" ||
                         "},\n"
             s ||:= d
+            
             id_id +:= 1
         }
-        group_id +:= 1
+        group_id +:= 2
     }
     s ||:= "]);"
    # write(s)
@@ -81,12 +101,18 @@ procedure write_html(data_set)
     .vis-item.ahead  { background-color: #69b5d3; }\n_
     .vis-item.behind  { background-color: #d6b4b4; }\n_
     .vis-item.milestone  { background-color: #ece0a9; }\n_
+    .baseline {\n_
+      font-family:  sans-serif;\n_
+      font-style:italic;\n_
+      font-size: 11pt;\n_
+      background: #d4d0d0;\n_
+    }\n_
   </style>\n_
 </head>\n_
 <body>\n_
-<p>\n_
-  Results from XERscry.\n_
-</p>\n_
+<h1 style=\"color:#262829\">\n_
+Results from XERscry - Probabalistic Schedule Updating\n_
+</h1>\n_
 <div id=\"visualization\"></div>\n_
 \n_
 <script>\n_

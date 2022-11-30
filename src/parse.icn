@@ -121,6 +121,7 @@ procedure add_custom_list(txt_filename)
                 insert(g_tbl_tasks_code,fake_root_task_code,r_task(
                                     fake_root_task_id,fake_root_task_code,"User-Imported Custom Task List",
                                     "","","",  # Baseline start/finish/duration blank on initial load, unless user selects a baseline file.
+                                    "","","",  # Bench start/finish/duration blank on initial load, unless user selects a baseline file.
                                     curr_record.target_start,curr_record.target_finish,
                                     curr_record.actual_start,curr_record.actual_finish,
                                     curr_record.early_start,curr_record.early_finish,
