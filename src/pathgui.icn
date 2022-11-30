@@ -273,6 +273,9 @@ class XERPath : Dialog(button_open_xer, label_activity_name, label_task_id, tabl
                text_list_solutions.set_selections([])
                table_xer_results.set_contents([])
             }
+
+            text_list_solutions.set_selections([1])
+            table_xer_results.set_contents(result_sol_tbl[1])
    end
 
    # Callback filter the schedule by task_name based on typed text in input field (using regex)
